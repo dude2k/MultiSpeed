@@ -1,0 +1,7 @@
+extends:
+  - recommended
+
+rules:
+  # Read-only/liveness operations do not invent a client-error outcome merely
+  # to satisfy a generic style rule; concrete 4xx responses remain documented.
+  operation-4xx-response: off

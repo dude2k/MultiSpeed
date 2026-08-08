@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/dude2k/MultiSpeed/security/advisories/new
+    about: Report vulnerabilities and sensitive findings privately.
+  - name: Networking guide
+    url: https://github.com/dude2k/MultiSpeed/blob/main/docs/networking.md
+    about: Review host-network and policy-routing prerequisites before reporting a path mismatch.

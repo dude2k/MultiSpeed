@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+case " $* " in
+  *" --version "*)
+    printf '%s\n' 'librespeed-cli v1.0.13+multispeed.dns2.xnet055 deterministic-e2e'
+    ;;
+  *" --list "*)
+    printf '%s\n' '201: Berlin Fixture (https://librespeed.fixture.invalid)  [Sponsor: MultiSpeed E2E @ https://github.com/dude2k/MultiSpeed]'
+    ;;
+  *)
+    printf '%s\n' '[{"timestamp":"2026-08-05T08:01:00Z","server":{"id":201,"name":"Berlin Fixture","url":"https://librespeed.fixture.invalid"},"client":{"ip":"198.51.100.20"},"bytes_sent":11875000,"bytes_received":67500000,"ping":18.5,"jitter":3.25,"upload":95,"download":540,"share":""}]'
+    ;;
+esac

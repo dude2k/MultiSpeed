@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible MultiSpeed defect without sensitive network data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        MultiSpeed has no authentication. Remove public/source IPs, route details, database content, provider output, and secrets before posting. Use private vulnerability reporting for security issues.
+
+  - type: input
+    id: version
+    attributes:
+      label: MultiSpeed version or image digest
+      placeholder: 1.0.0 or ghcr.io/dude2k/multispeed@sha256:...
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Linux and Docker versions
+      placeholder: Debian 13; Docker 29; Compose 2.x; linux/amd64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Supplied Compose file, unchanged
+        - Supplied Compose file, with documented override
+        - docker run
+        - Native development process
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include sanitized errors and request IDs. Do not attach a database or backup.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use documentation address ranges such as 192.0.2.0/24 instead of real addresses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: checks
+    attributes:
+      label: Relevant checks
+      description: Summarize health/readiness, provider availability, interface state, and route-profile validation with sensitive fields removed.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed private/public IPs, provider raw output, credentials, database content, and other sensitive data.
+          required: true
+        - label: This is not a vulnerability report.
+          required: true
+        - label: No real public speed test is required to reproduce this report.
+          required: true

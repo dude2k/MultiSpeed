@@ -1,0 +1,191 @@
+name: Release container
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILDX_METADATA_PROVENANCE: "false"
+  DOCKER_BUILD_RECORD_UPLOAD: "false"
+
+jobs:
+  image:
+    name: Publish linux/amd64 image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate stable semantic-version tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "version=${GITHUB_REF_NAME#v}" >> "${GITHUB_OUTPUT}"
+          echo "build_date=$(git show -s --format=%cI "${GITHUB_SHA}")" >> "${GITHUB_OUTPUT}"
+
+      - name: Require the current tested main commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          [[ "${GITHUB_SHA}" == "$(git rev-parse origin/main)" ]]
+          required_checks=(
+            "Go format, lint, test, and build"
+            "Frontend lint, type check, test, and build"
+            "Playwright end-to-end tests"
+            "Docker build, scan, SBOM, and smoke test"
+            "Dependency and repository scan"
+            "CodeQL (go)"
+            "CodeQL (javascript-typescript)"
+          )
+          for check_name in "${required_checks[@]}"; do
+            conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+              --jq ".check_runs[] | select(.name == \"${check_name}\") | .conclusion" | head -n 1)"
+            [[ "${conclusion}" == "success" ]]
+          done
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/dude2k/multispeed
+          flavor: latest=true
+          labels: |
+            org.opencontainers.image.created=${{ steps.release.outputs.build_date }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build local release candidate
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: |
+            multispeed:release-candidate
+            multispeed:${{ steps.release.outputs.version }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            BUILD_DATE=${{ steps.release.outputs.build_date }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Scan release candidate before publication
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.73.0
+          scan-type: image
+          image-ref: multispeed:release-candidate
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Generate release SPDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.73.0
+          scan-type: image
+          image-ref: multispeed:${{ steps.release.outputs.version }}
+          format: spdx-json
+          output: multispeed-${{ steps.release.outputs.version }}.spdx.json
+
+      - name: Smoke-test release candidate before publication
+        env:
+          MULTISPEED_SMOKE_PORT: "18787"
+        run: bash scripts/docker-smoke.sh multispeed:release-candidate
+
+      - name: Log in to GHCR after security gates pass
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the scanned image bytes
+        id: publish
+        shell: bash
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          first_tag=""
+          while IFS= read -r tag; do
+            [[ -n "${tag}" ]] || continue
+            docker image tag multispeed:release-candidate "${tag}"
+            docker image push "${tag}"
+            [[ -n "${first_tag}" ]] || first_tag="${tag}"
+          done <<< "${IMAGE_TAGS}"
+          [[ -n "${first_tag}" ]]
+          repository_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "${first_tag}")"
+          digest="${repository_digest##*@}"
+          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/dude2k/multispeed
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest release SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/dude2k/multispeed
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          sbom-path: multispeed-${{ steps.release.outputs.version }}.spdx.json
+          push-to-registry: true
+
+      - name: Upload release SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: multispeed-${{ steps.release.outputs.version }}-sbom
+          path: multispeed-${{ steps.release.outputs.version }}.spdx.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "multispeed-${{ steps.release.outputs.version }}.spdx.json#SPDX SBOM" \
+            --verify-tag \
+            --title "MultiSpeed ${{ steps.release.outputs.version }}" \
+            --draft \
+            --generate-notes

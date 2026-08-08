@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a focused improvement consistent with MultiSpeed's safety model.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the operator need and current limitation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain UI/API behavior, persistence, failure states, and observability.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Scheduling and execution
+        - Linux networking and route validation
+        - Provider adapter
+        - Results and statistics
+        - Frontend and accessibility
+        - API and integrations
+        - Container and operations
+        - Documentation
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Architecture invariants
+      options:
+        - label: The proposal does not require MultiSpeed to modify host routes, rules, addresses, gateways, or firewall state.
+          required: true
+        - label: The proposal does not add built-in authentication, a second application container, Docker socket access, or elevated capabilities.
+          required: true
+        - label: The proposal does not require redistributing Ookla Speedtest CLI.
+          required: true

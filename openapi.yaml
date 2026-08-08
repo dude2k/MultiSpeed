@@ -1,0 +1,2770 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: MultiSpeed API
+  version: 1.0.0
+  summary: Multi-WAN speed-test scheduling, execution, routing, and statistics API
+  description: |
+    Same-origin API for MultiSpeed. There is deliberately no authentication.
+    Keep the listener on loopback or a trusted network unless an authenticating
+    reverse proxy protects it. Browser mutations are origin-validated.
+  license:
+    name: MIT
+    identifier: MIT
+  contact:
+    name: MultiSpeed issue tracker
+    url: https://github.com/dude2k/MultiSpeed/issues
+servers:
+  - url: /api/v1
+    description: Same-origin application API
+security: []
+tags:
+  - name: Health
+    description: Process liveness and database readiness.
+  - name: Tasks
+    description: Independent persisted speed-test definitions and execution controls.
+  - name: Results
+    description: Test lifecycle records, metrics, and bounded diagnostics.
+  - name: Statistics
+    description: Timezone-aware raw and aggregate reporting.
+  - name: Network
+    description: Read-only Linux interface discovery.
+  - name: Route profiles
+    description: Persisted expectations and read-only network-path validation.
+  - name: Providers
+    description: Provider capabilities, availability, discovery, and target validation.
+  - name: Settings
+    description: Persisted display, concurrency, retention, refresh, and maintenance settings.
+  - name: Retention
+    description: Bounded manual cleanup using persisted policy or an explicit cutoff.
+  - name: Export and backup
+    description: Filtered exports and consistent online SQLite snapshots.
+  - name: Configuration
+    description: Versioned portable settings, task, and route-profile configuration.
+  - name: Events
+    description: Bounded live updates through Server-Sent Events.
+  - name: System
+    description: Sanitized build, database, provider, interface, and uptime information.
+
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Check process liveness
+      responses:
+        "200":
+          description: Process is alive.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /readyz:
+    get:
+      operationId: getReadiness
+      tags: [Health]
+      summary: Check application readiness
+      responses:
+        "200":
+          description: Database, integrity checks, and migrations are ready.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Readiness"
+        "503":
+          $ref: "#/components/responses/NotReady"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [Tasks]
+      summary: List all speed-test tasks
+      responses:
+        "200":
+          description: Tasks ordered by name.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10000
+                items:
+                  $ref: "#/components/schemas/Task"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createTask
+      tags: [Tasks]
+      summary: Create and immediately schedule a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task was persisted and its schedule was installed.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/validate:
+    post:
+      operationId: validateTransientTask
+      tags: [Tasks]
+      summary: Preflight an unsaved task and its exact network path
+      description: Applies persisted and declared task defaults, validates the strict task/provider DTO and concrete interface/source address, then performs route and public-path validation. It never persists or executes the task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "200":
+          description: The unsaved task and selected network path are valid.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteValidation"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          description: The task DTO, provider target, interface/source, route, or public path is invalid.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorEnvelope"
+                  - $ref: "#/components/schemas/RouteValidation"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getTask
+      tags: [Tasks]
+      summary: Get one task
+      responses:
+        "200":
+          description: Task details.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateTask
+      tags: [Tasks]
+      summary: Replace and immediately reschedule a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "200":
+          description: Updated task.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteTask
+      tags: [Tasks]
+      summary: Delete a task while preserving history
+      description: Removes the scheduler entry and soft-deletes the task. Historical results remain available for analysis.
+      responses:
+        "204":
+          description: Task deleted; historical results were preserved.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/run:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: runTask
+      tags: [Tasks]
+      summary: Queue a manual run
+      description: Limited to four requests per minute per client. Uses the same execution pipeline as scheduled runs.
+      responses:
+        "202":
+          description: A queued result was created.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /tasks/{id}/validate:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: validateTask
+      tags: [Tasks]
+      summary: Validate a task and its selected route
+      responses:
+        "200":
+          description: Task and route are valid.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteValidation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Task or selected route is invalid. The response is either the standard error envelope or a failed route snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorEnvelope"
+                  - $ref: "#/components/schemas/RouteValidation"
+
+  /tasks/{id}/duplicate:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: duplicateTask
+      tags: [Tasks]
+      summary: Duplicate a task in disabled state
+      responses:
+        "201":
+          description: Disabled copy with a new ID.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /tasks/{id}/next-runs:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getTaskNextRuns
+      tags: [Tasks]
+      summary: Calculate the next five task runs
+      responses:
+        "200":
+          description: Next runs in UTC for the task's IANA timezone.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextRuns"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /results:
+    get:
+      operationId: listResults
+      tags: [Results]
+      summary: List and filter results
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/TaskIDFilter"
+        - $ref: "#/components/parameters/ProviderFilter"
+        - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/InterfaceFilter"
+        - $ref: "#/components/parameters/SourceIPFilter"
+        - $ref: "#/components/parameters/ServerIDFilter"
+        - $ref: "#/components/parameters/FromFilter"
+        - $ref: "#/components/parameters/ToFilter"
+        - $ref: "#/components/parameters/ResultSort"
+        - $ref: "#/components/parameters/SortDirection"
+      responses:
+        "200":
+          description: Paginated result set.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultPage"
+        "400":
+          $ref: "#/components/responses/InvalidFilter"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /results/dashboard-summary:
+    get:
+      operationId: getDashboardResultSummary
+      tags: [Results]
+      summary: Get a bounded operational result snapshot
+      description: |
+        Returns the latest result of any status for every configured task and WAN path,
+        up to 1,000 active runs, and the five most recent failures. Tasks and paths that
+        have never run are represented with a null latest result. Large diagnostics are
+        available only from the result-detail endpoint.
+      responses:
+        "200":
+          description: Bounded dashboard result snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResultSummary"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /results/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getResult
+      tags: [Results]
+      summary: Get one result with bounded diagnostics
+      responses:
+        "200":
+          description: Result details.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteResult
+      tags: [Results]
+      summary: Delete one result
+      responses:
+        "204":
+          description: Result deleted.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /results/delete-batch:
+    post:
+      operationId: deleteResultsBatch
+      tags: [Results]
+      summary: Delete a bounded set of results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  uniqueItems: true
+                  items:
+                    $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Number of matching rows deleted.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [deleted]
+                properties:
+                  deleted:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    maximum: 500
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+
+  /statistics:
+    get:
+      operationId: getStatistics
+      tags: [Statistics]
+      summary: Query raw or timezone-aware aggregate statistics
+      parameters:
+        - name: from
+          in: query
+          description: Inclusive start. Defaults to 30 days before the request.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: Exclusive end. Defaults to the request time. Ranges are limited to ten years.
+          schema:
+            type: string
+            format: date-time
+        - name: granularity
+          in: query
+          schema:
+            $ref: "#/components/schemas/StatisticsGranularity"
+        - name: timezone
+          in: query
+          description: IANA reporting timezone; defaults to persisted settings.
+          schema:
+            type: string
+            maxLength: 128
+            example: Europe/Berlin
+        - name: groupBy
+          in: query
+          schema:
+            $ref: "#/components/schemas/StatisticsDimension"
+        - $ref: "#/components/parameters/TaskIDListFilter"
+        - $ref: "#/components/parameters/ProviderListFilter"
+        - $ref: "#/components/parameters/InterfaceListFilter"
+        - $ref: "#/components/parameters/SourceIPListFilter"
+        - $ref: "#/components/parameters/ServerIDListFilter"
+        - $ref: "#/components/parameters/RouteProfileIDListFilter"
+        - $ref: "#/components/parameters/PublicIPListFilter"
+      responses:
+        "200":
+          description: Normalized statistics report. Raw queries are limited to 90 days; the materialized report contains at most 5,000 output points and 1,000 comparison groups.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsReport"
+        "400":
+          $ref: "#/components/responses/InvalidFilter"
+        "413":
+          $ref: "#/components/responses/StatisticsLimitExceeded"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /interfaces:
+    get:
+      operationId: listInterfaces
+      tags: [Network]
+      summary: Get the most recent interface snapshot
+      parameters:
+        - name: includeLoopback
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeDown
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeVirtual
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Interface snapshot from the active Linux network namespace.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterfaceSnapshot"
+        "400":
+          $ref: "#/components/responses/InvalidFilter"
+
+  /interfaces/refresh:
+    post:
+      operationId: refreshInterfaces
+      tags: [Network]
+      summary: Refresh interface state immediately
+      responses:
+        "200":
+          description: Refreshed interface snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterfaceSnapshot"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /route-profiles:
+    get:
+      operationId: listRouteProfiles
+      tags: [Route profiles]
+      summary: List persisted read-only route profiles
+      responses:
+        "200":
+          description: Route profiles.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10000
+                items:
+                  $ref: "#/components/schemas/RouteProfile"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createRouteProfile
+      tags: [Route profiles]
+      summary: Create a route profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteProfileInput"
+      responses:
+        "201":
+          description: Created profile.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteProfile"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /route-profiles/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getRouteProfile
+      tags: [Route profiles]
+      summary: Get one route profile
+      responses:
+        "200":
+          description: Route profile.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateRouteProfile
+      tags: [Route profiles]
+      summary: Replace a route profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteProfileInput"
+      responses:
+        "200":
+          description: Updated profile.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteProfile"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      operationId: deleteRouteProfile
+      tags: [Route profiles]
+      summary: Delete a route profile
+      description: Soft-deletes an unreferenced profile while preserving historical result snapshots. Referenced profiles return HTTP 409.
+      responses:
+        "204":
+          description: Profile deleted.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /route-profiles/{id}/validate:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: validateRouteProfile
+      tags: [Route profiles]
+      summary: Perform read-only route and reachability validation
+      responses:
+        "200":
+          description: Route matched the profile.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteValidation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Validation completed with a mismatch or reachability failure.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteValidation"
+
+  /providers:
+    get:
+      operationId: listProviders
+      tags: [Providers]
+      summary: List provider capabilities and availability
+      responses:
+        "200":
+          description: Provider descriptors.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 3
+                items:
+                  $ref: "#/components/schemas/ProviderDescriptor"
+
+  /providers/{provider}/servers:
+    parameters:
+      - $ref: "#/components/parameters/ProviderPath"
+    get:
+      operationId: listProviderServers
+      tags: [Providers]
+      summary: Discover provider servers over the selected network path
+      parameters:
+        - name: interface
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/InterfaceName"
+        - name: sourceIp
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/IPAddress"
+        - name: ipFamily
+          in: query
+          schema:
+            $ref: "#/components/schemas/IPFamily"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+      responses:
+        "200":
+          description: Matching provider servers.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items:
+                  $ref: "#/components/schemas/ProviderServer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/ProviderFailure"
+
+  /providers/{provider}/validate-server:
+    parameters:
+      - $ref: "#/components/parameters/ProviderPath"
+    post:
+      operationId: validateProviderServer
+      tags: [Providers]
+      summary: Validate a provider target over a selected network path without running a speed test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderServerValidation"
+      responses:
+        "200":
+          description: The target, route, and bounded provider reachability checks succeeded.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [valid, success, message, provider, target]
+                properties:
+                  valid:
+                    const: true
+                  success:
+                    const: true
+                  message:
+                    type: string
+                    maxLength: 2048
+                  provider:
+                    $ref: "#/components/schemas/ProviderID"
+                  target:
+                    $ref: "#/components/schemas/TestTarget"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [Settings]
+      summary: Get persisted application settings
+      responses:
+        "200":
+          description: Current settings.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateSettings
+      tags: [Settings]
+      summary: Replace persisted application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Settings"
+      responses:
+        "200":
+          description: Updated settings.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /settings/ookla-eula:
+    put:
+      operationId: updateOoklaEulaAcceptance
+      tags: [Settings, Providers]
+      summary: Record or revoke explicit Ookla EULA acceptance
+      description: |
+        Updates MultiSpeed's persisted technical gate for the operator-supplied
+        Ookla CLI. Acceptance does not install the CLI, grant a license, or
+        replace any permission required by Ookla's current terms.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OoklaEULAAcceptanceRequest"
+      responses:
+        "200":
+          description: Updated settings and persisted acceptance timestamp.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /retention/cleanup:
+    post:
+      operationId: cleanupResults
+      tags: [Retention]
+      summary: Run bounded result retention cleanup
+      description: Uses the persisted retention policy when the optional cutoff is omitted. Task definitions are preserved.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                before:
+                  type: string
+                  format: date-time
+                  description: Delete results strictly older than this past UTC instant.
+      responses:
+        "200":
+          description: Cleanup metrics, including whether the safety batch limit was reached.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionMetrics"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /exports/results.csv:
+    get:
+      operationId: exportResultsCSV
+      tags: [Export and backup]
+      summary: Stream filtered results as CSV
+      parameters:
+        - $ref: "#/components/parameters/TaskIDFilter"
+        - $ref: "#/components/parameters/ProviderFilter"
+        - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/InterfaceFilter"
+        - $ref: "#/components/parameters/SourceIPFilter"
+        - $ref: "#/components/parameters/ServerIDFilter"
+        - $ref: "#/components/parameters/FromFilter"
+        - $ref: "#/components/parameters/ToFilter"
+        - $ref: "#/components/parameters/ResultSort"
+        - $ref: "#/components/parameters/SortDirection"
+      responses:
+        "200":
+          description: UTF-8 CSV attachment.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Content-Disposition:
+              schema:
+                type: string
+              example: attachment; filename="multispeed-results.csv"
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/InvalidFilter"
+
+  /exports/results.json:
+    get:
+      operationId: exportResultsJSON
+      tags: [Export and backup]
+      summary: Stream filtered results as JSON
+      parameters:
+        - $ref: "#/components/parameters/TaskIDFilter"
+        - $ref: "#/components/parameters/ProviderFilter"
+        - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/InterfaceFilter"
+        - $ref: "#/components/parameters/SourceIPFilter"
+        - $ref: "#/components/parameters/ServerIDFilter"
+        - $ref: "#/components/parameters/FromFilter"
+        - $ref: "#/components/parameters/ToFilter"
+        - $ref: "#/components/parameters/ResultSort"
+        - $ref: "#/components/parameters/SortDirection"
+      responses:
+        "200":
+          description: JSON array attachment.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Content-Disposition:
+              schema:
+                type: string
+              example: attachment; filename="multispeed-results.json"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Result"
+        "400":
+          $ref: "#/components/responses/InvalidFilter"
+
+  /config/export:
+    get:
+      operationId: exportConfiguration
+      tags: [Configuration]
+      summary: Download the current portable configuration
+      description: Exports operational settings, active tasks, and active route profiles. Results and Ookla EULA acknowledgement state are intentionally excluded.
+      responses:
+        "200":
+          description: Versioned JSON configuration attachment from one consistent database snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Content-Disposition:
+              schema:
+                type: string
+              example: attachment; filename="multispeed-config-20260807T180000Z.json"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationDocument"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /config/import:
+    post:
+      operationId: importConfiguration
+      tags: [Configuration]
+      summary: Atomically replace the portable configuration
+      description: |
+        Strictly validates the complete versioned document before replacing operational settings,
+        active tasks, and active route profiles in one transaction. Existing results and Ookla EULA
+        acknowledgement state are preserved. Import is rejected while any test is queued, validating,
+        or running. Enabled tasks must reference a source address currently present on their interface.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurationDocument"
+      responses:
+        "200":
+          description: Configuration imported and schedules reconciled.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationImportResult"
+        "400":
+          $ref: "#/components/responses/InvalidJSON"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "415":
+          $ref: "#/components/responses/UnsupportedContentType"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup:
+    post:
+      operationId: createBackup
+      tags: [Export and backup]
+      summary: Download a consistent online SQLite backup
+      responses:
+        "200":
+          description: Complete SQLite database snapshot.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Content-Disposition:
+              schema:
+                type: string
+              example: attachment; filename="multispeed-backup.db"
+          content:
+            application/vnd.sqlite3:
+              schema:
+                type: string
+                format: binary
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events:
+    get:
+      operationId: streamEvents
+      tags: [Events]
+      summary: Subscribe to bounded live application events
+      responses:
+        "200":
+          description: Server-Sent Event stream with heartbeat comments.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                examples:
+                  - "id: 42\nevent: test.completed\ndata: {\"id\":42,\"type\":\"test.completed\",\"data\":{}}\n\n"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /system:
+    get:
+      operationId: getSystemInformation
+      tags: [System]
+      summary: Get sanitized build and runtime information
+      responses:
+        "200":
+          description: System information without environment-variable values.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemInformation"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  headers:
+    RequestID:
+      description: Request correlation identifier.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+  parameters:
+    ResourceID:
+      name: id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    ProviderPath:
+      name: provider
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ProviderID"
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 25
+    TaskIDFilter:
+      name: taskId
+      in: query
+      schema:
+        $ref: "#/components/schemas/UUID"
+    ProviderFilter:
+      name: provider
+      in: query
+      schema:
+        $ref: "#/components/schemas/ProviderID"
+    StatusFilter:
+      name: status
+      in: query
+      schema:
+        $ref: "#/components/schemas/ResultStatus"
+    InterfaceFilter:
+      name: interface
+      in: query
+      schema:
+        $ref: "#/components/schemas/InterfaceName"
+    SourceIPFilter:
+      name: sourceIp
+      in: query
+      schema:
+        $ref: "#/components/schemas/IPAddress"
+    ServerIDFilter:
+      name: serverId
+      in: query
+      schema:
+        type: string
+        maxLength: 128
+    FromFilter:
+      name: from
+      in: query
+      description: Inclusive RFC 3339 start instant.
+      schema:
+        type: string
+        format: date-time
+    ToFilter:
+      name: to
+      in: query
+      description: Exclusive RFC 3339 end instant.
+      schema:
+        type: string
+        format: date-time
+    ResultSort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [startedAt, finishedAt, download, upload, latency]
+        default: startedAt
+    SortDirection:
+      name: direction
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    TaskIDListFilter:
+      name: taskId
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          $ref: "#/components/schemas/UUID"
+      style: form
+      explode: true
+    ProviderListFilter:
+      name: provider
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 3
+        items:
+          $ref: "#/components/schemas/ProviderID"
+      style: form
+      explode: true
+    InterfaceListFilter:
+      name: interface
+      in: query
+      description: Repeat the parameter or provide comma-separated values. The legacy interfaceName alias shares this combined 200-value limit.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          $ref: "#/components/schemas/InterfaceName"
+      style: form
+      explode: true
+    SourceIPListFilter:
+      name: sourceIp
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          $ref: "#/components/schemas/IPAddress"
+      style: form
+      explode: true
+    ServerIDListFilter:
+      name: serverId
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          type: string
+          maxLength: 128
+      style: form
+      explode: true
+    RouteProfileIDListFilter:
+      name: routeProfileId
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          $ref: "#/components/schemas/UUID"
+      style: form
+      explode: true
+    PublicIPListFilter:
+      name: publicIp
+      in: query
+      description: Repeat the parameter or provide comma-separated values.
+      schema:
+        type: array
+        maxItems: 200
+        items:
+          $ref: "#/components/schemas/IPAddress"
+      style: form
+      explode: true
+
+  responses:
+    InvalidJSON:
+      description: Malformed, oversized, multiple-value, or schema-incompatible JSON.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    InvalidFilter:
+      description: One or more query parameters are invalid.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ValidationError:
+      description: The resource, schedule, target, interface, source address, or route is invalid.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    UnsupportedContentType:
+      description: "A JSON body was sent without Content-Type: application/json."
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Resource or provider was not found.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotReady:
+      description: Application startup/integrity dependencies are not ready.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: The operation conflicts with current resource, execution, or queue state.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    RateLimited:
+      description: Manual execution or provider discovery rate limit exceeded.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ProviderFailure:
+      description: A bounded provider operation failed.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    StatisticsLimitExceeded:
+      description: The statistics query matched more than 50,000 results, would materialize more than 5,000 output points or 1,000 comparison groups, or contains a comparison-dimension value longer than 512 bytes.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          examples:
+            resultLimit:
+              summary: Raw-result processing limit
+              value:
+                error:
+                  code: STATISTICS_LIMIT_EXCEEDED
+                  message: The query matches more than 50,000 results; narrow the range or filters.
+                  requestId: 7a2f7405f2913c47a6f00e19
+            outputLimit:
+              summary: Materialized output limit
+              value:
+                error:
+                  code: STATISTICS_OUTPUT_LIMIT_EXCEEDED
+                  message: The query would produce more than 5,000 output points or 1,000 groups; use a coarser granularity, shorter range, or narrower filters.
+                  requestId: 7a2f7405f2913c47a6f00e19
+            dimensionLimit:
+              summary: Comparison-dimension value limit
+              value:
+                error:
+                  code: STATISTICS_DIMENSION_LIMIT_EXCEEDED
+                  message: The selected comparison dimension contains a value longer than 512 bytes; choose another groupBy dimension or narrow the query to exclude that value.
+                  requestId: 7a2f7405f2913c47a6f00e19
+    ServiceUnavailable:
+      description: The bounded live-event subscriber capacity has been reached.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    InternalError:
+      description: Sanitized internal error.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      maxLength: 36
+
+    IPAddress:
+      type: string
+      minLength: 2
+      maxLength: 64
+      description: Canonical IPv4 or IPv6 address without a prefix length.
+      examples: [192.0.2.10, "2001:db8::10"]
+
+    InterfaceName:
+      type: string
+      minLength: 1
+      maxLength: 64
+      pattern: "^[^\\x00/\\s]+$"
+      examples: [wan0]
+
+    ProviderID:
+      type: string
+      enum: [ookla, librespeed, cloudflare]
+
+    IPFamily:
+      type: string
+      enum: [auto, ipv4, ipv6]
+      default: auto
+
+    ResultStatus:
+      type: string
+      enum: [queued, validating, running, succeeded, failed, skipped, cancelled]
+
+    TriggerType:
+      type: string
+      enum: [scheduled, manual]
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              pattern: "^[A-Z][A-Z0-9_]*$"
+              maxLength: 64
+            message:
+              type: string
+              minLength: 1
+              maxLength: 8192
+            requestId:
+              type: string
+              minLength: 1
+              maxLength: 128
+      examples:
+        - error:
+            code: ROUTE_VALIDATION_FAILED
+            message: The configured route does not use the selected WAN interface.
+            requestId: 73c754bea60aa4e18657a537
+
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, version, uptimeSeconds]
+      properties:
+        status:
+          const: ok
+        version:
+          type: string
+          maxLength: 128
+        uptimeSeconds:
+          type: integer
+          format: int64
+          minimum: 0
+
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          const: ready
+
+    TaskFields:
+      type: object
+      required:
+        - name
+        - enabled
+        - provider
+        - interfaceName
+        - sourceIp
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 4000
+          default: ""
+        enabled:
+          type: boolean
+        provider:
+          $ref: "#/components/schemas/ProviderID"
+        cronExpression:
+          type: string
+          minLength: 9
+          maxLength: 256
+          description: Standard five-field cron expression. Defaults to `0 * * * *` when omitted on creation.
+          default: 0 * * * *
+          examples: ["17 */6 * * *"]
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: IANA timezone. Defaults to the persisted `settings.defaultTimezone` when omitted on creation.
+          examples: [Europe/Berlin]
+        randomJitterSeconds:
+          type: integer
+          minimum: 0
+          maximum: 3600
+          default: 0
+        serverSelectionMode:
+          type: string
+          enum: [automatic, fixed, custom]
+          default: automatic
+        serverId:
+          type: string
+          maxLength: 128
+          default: ""
+        serverUrl:
+          type: string
+          maxLength: 2048
+          default: ""
+        customServerDefinition:
+          type: object
+          maxProperties: 32
+          additionalProperties: true
+          default: {}
+        interfaceName:
+          $ref: "#/components/schemas/InterfaceName"
+        sourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        ipFamily:
+          $ref: "#/components/schemas/IPFamily"
+        routeProfileId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+          default: null
+        timeoutSeconds:
+          type: integer
+          minimum: 5
+          maximum: 3600
+          description: Defaults to the persisted `settings.defaultTaskTimeoutSeconds` when omitted on creation.
+        providerOptions:
+          type: object
+          maxProperties: 32
+          additionalProperties: true
+          default: {}
+        preventOverlap:
+          type: boolean
+          default: true
+        routeValidation:
+          type: string
+          enum: [required, interface-only]
+          default: required
+
+    TaskInput:
+      description: On update, omitted defaultable fields retain their existing persisted task values.
+      allOf:
+        - $ref: "#/components/schemas/TaskFields"
+      unevaluatedProperties: false
+
+    Task:
+      allOf:
+        - $ref: "#/components/schemas/TaskFields"
+        - type: object
+          required: [id, cronExpression, timezone, serverSelectionMode, ipFamily, timeoutSeconds, preventOverlap, routeValidation, createdAt, updatedAt, lastScheduledAt, nextScheduledAt, networkPathValid, networkPathMessage]
+          properties:
+            id:
+              $ref: "#/components/schemas/UUID"
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            lastScheduledAt:
+              type: [string, "null"]
+              format: date-time
+            nextScheduledAt:
+              type: [string, "null"]
+              format: date-time
+            networkPathValid:
+              type: boolean
+            networkPathMessage:
+              type: string
+              maxLength: 2048
+      unevaluatedProperties: false
+
+    NextRuns:
+      type: object
+      additionalProperties: false
+      required: [taskId, cronExpression, timezone, nextRuns]
+      properties:
+        taskId:
+          $ref: "#/components/schemas/UUID"
+        cronExpression:
+          type: string
+        timezone:
+          type: string
+        nextRuns:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: string
+            format: date-time
+
+    ResultFields:
+      type: object
+      required:
+        - id
+        - taskId
+        - routeProfileId
+        - trigger
+        - provider
+        - queuedAt
+        - scheduledAt
+        - startedAt
+        - finishedAt
+        - status
+        - selectedInterface
+        - selectedSourceIp
+        - detectedPublicIp
+        - serverId
+        - serverName
+        - serverHost
+        - serverSponsor
+        - serverLocation
+        - serverCountry
+        - providerResultUrl
+        - cloudflareColo
+        - executionDurationMs
+        - sanitizedError
+        - providerVersion
+        - applicationVersion
+        - tlsVerificationDisabled
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        taskId:
+          $ref: "#/components/schemas/UUID"
+        routeProfileId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        trigger:
+          $ref: "#/components/schemas/TriggerType"
+        provider:
+          $ref: "#/components/schemas/ProviderID"
+        queuedAt:
+          type: string
+          format: date-time
+        scheduledAt:
+          type: [string, "null"]
+          format: date-time
+        startedAt:
+          type: [string, "null"]
+          format: date-time
+        finishedAt:
+          type: [string, "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/ResultStatus"
+        downloadBitsPerSecond:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0
+        uploadBitsPerSecond:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0
+        latencyMilliseconds:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+        jitterMilliseconds:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+        packetLossPercent:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        downloadBytes:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0
+        uploadBytes:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0
+        selectedInterface:
+          $ref: "#/components/schemas/InterfaceName"
+        selectedSourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        detectedPublicIp:
+          type: string
+          maxLength: 64
+        serverId:
+          type: string
+          maxLength: 128
+        serverName:
+          type: string
+          maxLength: 512
+        serverHost:
+          type: string
+          maxLength: 512
+        serverSponsor:
+          type: string
+          maxLength: 512
+        serverLocation:
+          type: string
+          maxLength: 512
+        serverCountry:
+          type: string
+          maxLength: 256
+        providerResultUrl:
+          type: string
+          maxLength: 2048
+        cloudflareColo:
+          type: string
+          maxLength: 16
+        executionDurationMs:
+          type: integer
+          format: int64
+          minimum: 0
+        processExitCode:
+          type: [integer, "null"]
+        sanitizedError:
+          type: string
+          maxLength: 8192
+        providerVersion:
+          type: string
+          maxLength: 512
+        applicationVersion:
+          type: string
+          maxLength: 128
+        tlsVerificationDisabled:
+          description: Whether TLS certificate verification was explicitly disabled for this test.
+          type: boolean
+
+    ResultSummary:
+      description: Bounded result metadata returned by collection and dashboard endpoints; large diagnostics are omitted.
+      allOf:
+        - $ref: "#/components/schemas/ResultFields"
+      unevaluatedProperties: false
+
+    Result:
+      description: Full result detail including bounded diagnostic data.
+      allOf:
+        - $ref: "#/components/schemas/ResultFields"
+        - type: object
+          required: [routeValidationSnapshot, rawProviderResponse]
+          properties:
+            routeValidationSnapshot:
+              type: object
+              additionalProperties: true
+            rawProviderResponse:
+              type: string
+              maxLength: 262200
+      unevaluatedProperties: false
+
+    ResultPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/ResultSummary"
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 200
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+
+    DashboardTaskResult:
+      type: object
+      additionalProperties: false
+      required: [taskId, taskName, enabled, interfaceName, sourceIp, latestResult]
+      properties:
+        taskId:
+          $ref: "#/components/schemas/UUID"
+        taskName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        enabled:
+          type: boolean
+        interfaceName:
+          $ref: "#/components/schemas/InterfaceName"
+        sourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        latestResult:
+          oneOf:
+            - $ref: "#/components/schemas/ResultSummary"
+            - type: "null"
+
+    DashboardPathResult:
+      type: object
+      additionalProperties: false
+      required: [interfaceName, sourceIp, taskIds, latestResult]
+      properties:
+        interfaceName:
+          $ref: "#/components/schemas/InterfaceName"
+        sourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        taskIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/UUID"
+        latestResult:
+          oneOf:
+            - $ref: "#/components/schemas/ResultSummary"
+            - type: "null"
+
+    DashboardResultSummary:
+      type: object
+      additionalProperties: false
+      required: [latestByTask, latestByPath, activeRuns, recentFailures, failedTaskCount]
+      properties:
+        latestByTask:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/DashboardTaskResult"
+        latestByPath:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/DashboardPathResult"
+        activeRuns:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/ResultSummary"
+        recentFailures:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ResultSummary"
+        failedTaskCount:
+          type: integer
+          minimum: 0
+          maximum: 1000
+
+    NetworkInterface:
+      type: object
+      additionalProperties: false
+      required: [name, index, operational, operationalState, loopback, virtual, macAddress, mtu, addresses]
+      properties:
+        name:
+          $ref: "#/components/schemas/InterfaceName"
+        index:
+          type: integer
+          minimum: 1
+        operational:
+          type: boolean
+        operationalState:
+          type: string
+          maxLength: 32
+        loopback:
+          type: boolean
+        virtual:
+          type: boolean
+        macAddress:
+          type: string
+          maxLength: 64
+        mtu:
+          type: integer
+          minimum: 0
+        addresses:
+          type: array
+          maxItems: 256
+          items:
+            $ref: "#/components/schemas/InterfaceAddress"
+
+    InterfaceAddress:
+      type: object
+      additionalProperties: false
+      required: [address, family, linkLocal]
+      properties:
+        address:
+          $ref: "#/components/schemas/IPAddress"
+        family:
+          type: string
+          enum: [ipv4, ipv6]
+        linkLocal:
+          type: boolean
+
+    InterfaceSnapshot:
+      type: object
+      additionalProperties: false
+      required: [items, refreshedAt]
+      properties:
+        items:
+          type: array
+          maxItems: 4096
+          items:
+            $ref: "#/components/schemas/NetworkInterface"
+        interfaces:
+          description: Compatibility alias for `items` containing the same interface snapshot.
+          type: array
+          maxItems: 4096
+          items:
+            $ref: "#/components/schemas/NetworkInterface"
+        refreshedAt:
+          type: string
+          format: date-time
+
+    RouteProfileFields:
+      type: object
+      required: [name, interfaceName, sourceIp]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 4000
+          default: ""
+        interfaceName:
+          $ref: "#/components/schemas/InterfaceName"
+        sourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        expectedGateway:
+          type: string
+          maxLength: 64
+          default: ""
+        expectedRoutingTable:
+          type: string
+          maxLength: 64
+          pattern: '^(?:|[0-9]{1,10}|[A-Za-z][A-Za-z0-9_.-]{0,63})$'
+          description: Optional unsigned 32-bit numeric table ID or shell-safe Linux routing-table name.
+          default: ""
+        validationTarget:
+          type: string
+          minLength: 1
+          maxLength: 253
+          default: 1.1.1.1
+        notes:
+          type: string
+          maxLength: 8000
+          default: ""
+
+    RouteProfileInput:
+      allOf:
+        - $ref: "#/components/schemas/RouteProfileFields"
+      unevaluatedProperties: false
+
+    RouteProfile:
+      allOf:
+        - $ref: "#/components/schemas/RouteProfileFields"
+        - type: object
+          required:
+            - id
+            - createdAt
+            - updatedAt
+            - lastValidationAt
+            - lastValidationSucceeded
+            - lastValidationSnapshot
+          properties:
+            id:
+              $ref: "#/components/schemas/UUID"
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            lastValidationAt:
+              type: [string, "null"]
+              format: date-time
+            lastValidationSucceeded:
+              type: [boolean, "null"]
+            lastValidationSnapshot:
+              type: object
+              additionalProperties: true
+      unevaluatedProperties: false
+
+    RouteValidation:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - interfaceName
+        - sourceIp
+        - gateway
+        - routingTable
+        - destination
+        - detectedPublicIp
+        - reachable
+        - durationMs
+        - validatedAt
+        - message
+      properties:
+        success:
+          type: boolean
+        interfaceName:
+          type: string
+          maxLength: 64
+        sourceIp:
+          type: string
+          maxLength: 64
+        gateway:
+          type: string
+          maxLength: 64
+        routingTable:
+          type: string
+          maxLength: 128
+        destination:
+          type: string
+          maxLength: 253
+        detectedPublicIp:
+          type: string
+          maxLength: 64
+        reachable:
+          type: boolean
+        durationMs:
+          type: integer
+          format: int64
+          minimum: 0
+        validatedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+          maxLength: 4096
+
+    ProviderCapabilities:
+      type: object
+      additionalProperties: false
+      required:
+        - serverDiscovery
+        - fixedServerIds
+        - customServerUrls
+        - interfaceBinding
+        - sourceAddressBinding
+        - ipv4
+        - ipv6
+        - jitter
+        - packetLoss
+        - resultUrls
+      properties:
+        serverDiscovery: { type: boolean }
+        fixedServerIds: { type: boolean }
+        customServerUrls: { type: boolean }
+        interfaceBinding: { type: boolean }
+        sourceAddressBinding: { type: boolean }
+        ipv4: { type: boolean }
+        ipv6: { type: boolean }
+        jitter: { type: boolean }
+        packetLoss: { type: boolean }
+        resultUrls: { type: boolean }
+
+    ProviderDescriptor:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, capabilities, available, version, message]
+      properties:
+        id:
+          $ref: "#/components/schemas/ProviderID"
+        displayName:
+          type: string
+          maxLength: 128
+        capabilities:
+          $ref: "#/components/schemas/ProviderCapabilities"
+        available:
+          type: boolean
+        version:
+          type: string
+          maxLength: 512
+        message:
+          type: string
+          maxLength: 2048
+
+    ProviderServer:
+      type: object
+      additionalProperties: false
+      required: [id, name, host, sponsor, location, country]
+      properties:
+        id:
+          type: string
+          maxLength: 128
+        name:
+          type: string
+          maxLength: 512
+        host:
+          type: string
+          maxLength: 512
+        sponsor:
+          type: string
+          maxLength: 512
+        location:
+          type: string
+          maxLength: 512
+        country:
+          type: string
+          maxLength: 256
+        distanceKilometers:
+          type: number
+          minimum: 0
+        url:
+          type: string
+          maxLength: 2048
+
+    TestTarget:
+      type: object
+      additionalProperties: false
+      required: [selectionMode]
+      properties:
+        selectionMode:
+          type: string
+          enum: [automatic, fixed, custom]
+        serverId:
+          type: string
+          maxLength: 128
+          default: ""
+        serverUrl:
+          type: string
+          maxLength: 2048
+          default: ""
+        customServerDefinition:
+          type: object
+          maxProperties: 32
+          additionalProperties: true
+          default: {}
+
+    ProviderServerValidation:
+      type: object
+      additionalProperties: false
+      required: [selectionMode, interfaceName, sourceIp]
+      properties:
+        selectionMode:
+          type: string
+          enum: [automatic, fixed, custom]
+        serverId:
+          type: string
+          maxLength: 128
+          default: ""
+        serverUrl:
+          type: string
+          maxLength: 2048
+          default: ""
+        customServerDefinition:
+          type: object
+          maxProperties: 32
+          additionalProperties: true
+          default: {}
+        providerOptions:
+          type: object
+          maxProperties: 32
+          additionalProperties: true
+          description: Provider-specific validation options. LibreSpeed accepts the explicit `skipTlsVerification` boolean.
+          default: {}
+        interfaceName:
+          $ref: "#/components/schemas/InterfaceName"
+        sourceIp:
+          $ref: "#/components/schemas/IPAddress"
+        ipFamily:
+          $ref: "#/components/schemas/IPFamily"
+
+    Settings:
+      type: object
+      additionalProperties: false
+      required:
+        - displayUnits
+        - defaultTimezone
+        - globalConcurrency
+        - allowSeparateWanConcurrency
+        - retentionMode
+        - retentionValue
+        - defaultChartRange
+        - interfaceRefreshIntervalSeconds
+        - defaultTaskTimeoutSeconds
+        - databaseMaintenanceSchedule
+      properties:
+        displayUnits:
+          type: string
+          enum: [bits, bytes]
+        defaultTimezone:
+          type: string
+          minLength: 1
+          maxLength: 128
+          examples: [UTC]
+        globalConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 16
+          default: 1
+        allowSeparateWanConcurrency:
+          type: boolean
+          default: false
+        retentionMode:
+          type: string
+          enum: [forever, days, months]
+        retentionValue:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        defaultChartRange:
+          type: string
+          enum: [24h, 7d, 30d, 90d]
+        interfaceRefreshIntervalSeconds:
+          type: integer
+          minimum: 5
+          maximum: 3600
+        defaultTaskTimeoutSeconds:
+          type: integer
+          minimum: 5
+          maximum: 3600
+        databaseMaintenanceSchedule:
+          type: string
+          minLength: 9
+          maxLength: 256
+        ooklaEulaAccepted:
+          type: boolean
+          readOnly: true
+          description: Whether an operator recorded explicit acceptance through the dedicated licensing endpoint.
+        ooklaEulaAcceptedAt:
+          type: [string, "null"]
+          format: date-time
+          readOnly: true
+          description: UTC timestamp of the persisted acceptance, or null while revoked.
+        ooklaEulaVersion:
+          type: string
+          readOnly: true
+          description: Terms revision recorded with the persisted acknowledgement, or empty when none is stored.
+        ooklaEulaCurrentVersion:
+          type: string
+          readOnly: true
+          description: Terms revision required by this MultiSpeed release.
+        ooklaEulaEffectiveAccepted:
+          type: boolean
+          readOnly: true
+          description: Effective technical-gate state after applying the persisted acknowledgement and environment override.
+        ooklaEulaAcceptanceSource:
+          type: string
+          enum: [none, persisted, environment]
+          readOnly: true
+          description: Source currently opening the technical gate.
+
+    OoklaEULAAcceptanceRequest:
+      type: object
+      additionalProperties: false
+      required: [accepted, confirmed]
+      properties:
+        accepted:
+          type: boolean
+        confirmed:
+          type: boolean
+          description: Must be true when accepted is true; revocation does not require confirmation.
+
+    ConfigurationSettings:
+      type: object
+      additionalProperties: false
+      required:
+        - displayUnits
+        - defaultTimezone
+        - globalConcurrency
+        - allowSeparateWanConcurrency
+        - retentionMode
+        - retentionValue
+        - defaultChartRange
+        - interfaceRefreshIntervalSeconds
+        - defaultTaskTimeoutSeconds
+        - databaseMaintenanceSchedule
+      properties:
+        displayUnits:
+          type: string
+          enum: [bits, bytes]
+        defaultTimezone:
+          type: string
+          minLength: 1
+          maxLength: 128
+        globalConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 16
+        allowSeparateWanConcurrency:
+          type: boolean
+        retentionMode:
+          type: string
+          enum: [forever, days, months]
+        retentionValue:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        defaultChartRange:
+          type: string
+          enum: [24h, 7d, 30d, 90d]
+        interfaceRefreshIntervalSeconds:
+          type: integer
+          minimum: 5
+          maximum: 3600
+        defaultTaskTimeoutSeconds:
+          type: integer
+          minimum: 5
+          maximum: 3600
+        databaseMaintenanceSchedule:
+          type: string
+          minLength: 9
+          maxLength: 256
+
+    ConfigurationRouteProfile:
+      allOf:
+        - $ref: "#/components/schemas/RouteProfileFields"
+        - type: object
+          required: [id, description, expectedGateway, expectedRoutingTable, validationTarget, notes]
+          properties:
+            id:
+              $ref: "#/components/schemas/UUID"
+      unevaluatedProperties: false
+
+    ConfigurationTask:
+      allOf:
+        - $ref: "#/components/schemas/TaskFields"
+        - type: object
+          required:
+            - id
+            - description
+            - cronExpression
+            - timezone
+            - randomJitterSeconds
+            - serverSelectionMode
+            - serverId
+            - serverUrl
+            - customServerDefinition
+            - ipFamily
+            - routeProfileId
+            - timeoutSeconds
+            - providerOptions
+            - preventOverlap
+            - routeValidation
+          properties:
+            id:
+              $ref: "#/components/schemas/UUID"
+      unevaluatedProperties: false
+
+    ConfigurationDocument:
+      type: object
+      additionalProperties: false
+      required: [format, version, exportedAt, applicationVersion, settings, routeProfiles, tasks]
+      properties:
+        format:
+          const: multispeed-config
+        version:
+          type: integer
+          const: 1
+        exportedAt:
+          type: string
+          format: date-time
+        applicationVersion:
+          type: string
+          maxLength: 128
+        settings:
+          $ref: "#/components/schemas/ConfigurationSettings"
+        routeProfiles:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/ConfigurationRouteProfile"
+        tasks:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/ConfigurationTask"
+
+    ConfigurationImportResult:
+      type: object
+      additionalProperties: false
+      required: [importedAt, taskCount, routeProfileCount, settingsUpdated]
+      properties:
+        importedAt:
+          type: string
+          format: date-time
+        taskCount:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        routeProfileCount:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        settingsUpdated:
+          type: boolean
+
+    RetentionMetrics:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - startedAt
+        - finishedAt
+        - duration
+        - batches
+        - deletedResults
+        - limitReached
+        - maintenancePerformed
+      properties:
+        mode:
+          type: string
+          enum: [forever, days, months, manual]
+        cutoff:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Go duration encoded as nanoseconds.
+        batches:
+          type: integer
+          minimum: 0
+        deletedResults:
+          type: integer
+          format: int64
+          minimum: 0
+        limitReached:
+          type: boolean
+        maintenancePerformed:
+          type: boolean
+
+    StatisticsGranularity:
+      type: string
+      enum: [raw, day, iso-week, month, year, custom]
+      default: day
+
+    StatisticsDimension:
+      type: string
+      enum: ["", task, interface, source-ip, provider, server, route-profile, public-ip]
+      default: ""
+
+    StatisticsReport:
+      type: object
+      additionalProperties: false
+      required: [from, to, granularity, reportingTimezone, totalResults, overall, groups]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        granularity:
+          $ref: "#/components/schemas/StatisticsGranularity"
+        reportingTimezone:
+          type: string
+        groupBy:
+          $ref: "#/components/schemas/StatisticsDimension"
+        totalResults:
+          type: integer
+          minimum: 0
+        overall:
+          allOf:
+            - $ref: "#/components/schemas/StatisticsBucket"
+          description: Exact full-range aggregate calculated from all matching raw results, never from averages of buckets.
+        groups:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/StatisticsGroup"
+
+    StatisticsGroup:
+      type: object
+      additionalProperties: false
+      required: [key, label, overall, buckets]
+      properties:
+        key:
+          type: string
+          maxLength: 512
+        label:
+          type: string
+          maxLength: 512
+        overall:
+          allOf:
+            - $ref: "#/components/schemas/StatisticsBucket"
+          description: Exact full-range aggregate for this comparison group.
+        buckets:
+          type: array
+          maxItems: 4998
+          items:
+            $ref: "#/components/schemas/StatisticsBucket"
+
+    StatisticsBucket:
+      type: object
+      additionalProperties: false
+      required: [start, end, label, counts, successRatePercent, failureRatePercent, metrics]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        label:
+          type: string
+          maxLength: 128
+        resultId:
+          type: string
+          format: uuid
+        counts:
+          $ref: "#/components/schemas/StatisticsCounts"
+        successRatePercent:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 100
+          description: Successful results as a percentage of completed results (successful plus failed).
+        failureRatePercent:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 100
+          description: Failed results as a percentage of completed results (successful plus failed).
+        metrics:
+          $ref: "#/components/schemas/StatisticsMetrics"
+
+    StatisticsCounts:
+      type: object
+      additionalProperties: false
+      required: [total, successful, failed, skipped, cancelled, other]
+      properties:
+        total: { type: integer, minimum: 0 }
+        successful: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        cancelled: { type: integer, minimum: 0 }
+        other: { type: integer, minimum: 0 }
+
+    StatisticsMetrics:
+      type: object
+      additionalProperties: false
+      required:
+        - downloadBitsPerSecond
+        - uploadBitsPerSecond
+        - latencyMilliseconds
+        - jitterMilliseconds
+        - packetLossPercent
+        - executionDurationMilliseconds
+      properties:
+        downloadBitsPerSecond:
+          $ref: "#/components/schemas/MetricSummary"
+        uploadBitsPerSecond:
+          $ref: "#/components/schemas/MetricSummary"
+        latencyMilliseconds:
+          $ref: "#/components/schemas/MetricSummary"
+        jitterMilliseconds:
+          $ref: "#/components/schemas/MetricSummary"
+        packetLossPercent:
+          $ref: "#/components/schemas/MetricSummary"
+        executionDurationMilliseconds:
+          $ref: "#/components/schemas/MetricSummary"
+
+    MetricSummary:
+      type: object
+      additionalProperties: false
+      required: [count, minimum, maximum, average, median, p95, standardDeviation]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        minimum:
+          type: [number, "null"]
+        maximum:
+          type: [number, "null"]
+        average:
+          type: [number, "null"]
+        median:
+          type: [number, "null"]
+        p95:
+          type: [number, "null"]
+        standardDeviation:
+          type: [number, "null"]
+
+    SystemInformation:
+      type: object
+      additionalProperties: false
+      required:
+        - product
+        - version
+        - gitCommit
+        - buildTime
+        - buildDate
+        - goVersion
+        - operatingSystem
+        - architecture
+        - hostname
+        - databasePath
+        - databaseSizeBytes
+        - schemaVersion
+        - providers
+        - interfaces
+        - interfacesRefreshedAt
+        - taskCount
+        - resultCount
+        - runningTaskCount
+        - uptimeSeconds
+        - authenticationEnabled
+        - internetExposureWarning
+      properties:
+        product:
+          const: MultiSpeed
+        version:
+          type: string
+          maxLength: 128
+        gitCommit:
+          type: string
+          maxLength: 128
+        buildTime:
+          type: string
+          maxLength: 128
+        buildDate:
+          description: Compatibility alias for `buildTime`.
+          type: string
+          maxLength: 128
+        goVersion:
+          type: string
+          maxLength: 128
+        operatingSystem:
+          const: linux
+        architecture:
+          const: amd64
+        hostname:
+          type: string
+          maxLength: 253
+        databasePath:
+          type: string
+          maxLength: 4096
+        databaseSizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+        schemaVersion:
+          type: integer
+          minimum: 0
+        providers:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/ProviderDescriptor"
+        interfaces:
+          type: array
+          maxItems: 4096
+          items:
+            $ref: "#/components/schemas/NetworkInterface"
+        interfacesRefreshedAt:
+          type: string
+          format: date-time
+        taskCount:
+          type: integer
+          minimum: 0
+        resultCount:
+          type: integer
+          minimum: 0
+        runningTaskCount:
+          type: integer
+          minimum: 0
+        uptimeSeconds:
+          type: integer
+          format: int64
+          minimum: 0
+        authenticationEnabled:
+          const: false
+        internetExposureWarning:
+          type: string
+          minLength: 1
+          maxLength: 512

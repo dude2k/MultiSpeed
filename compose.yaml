@@ -1,0 +1,52 @@
+name: multispeed
+
+services:
+  multispeed:
+    image: ${MULTISPEED_IMAGE:-ghcr.io/dude2k/multispeed:latest}
+    build:
+      context: .
+      target: runtime
+    platform: linux/amd64
+    container_name: multispeed
+    network_mode: host
+    restart: unless-stopped
+    init: true
+    user: "${MULTISPEED_UID:-1000}:${MULTISPEED_GID:-1000}"
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: true
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+
+    volumes:
+      - ./data:/data
+
+    environment:
+      APP_LISTEN_ADDR: ${APP_LISTEN_ADDR:-0.0.0.0:8787}
+      APP_TRUSTED_HOSTS: ${APP_TRUSTED_HOSTS:-}
+      APP_ALLOWED_CUSTOM_SERVER_URLS: ${APP_ALLOWED_CUSTOM_SERVER_URLS:-}
+      APP_DATA_DIR: /data
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+      APP_SHUTDOWN_TIMEOUT: ${APP_SHUTDOWN_TIMEOUT:-20s}
+      TZ: ${TZ:-Europe/Berlin}
+      LIBRESPEED_BINARY: ${LIBRESPEED_BINARY:-/usr/local/bin/librespeed-cli}
+      OOKLA_BINARY: ${OOKLA_BINARY:-/opt/multispeed/providers/speedtest}
+      ACCEPT_OOKLA_EULA: ${ACCEPT_OOKLA_EULA:-false}
+
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/bin/multispeed
+        - healthcheck
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    stop_grace_period: 30s

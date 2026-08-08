@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 210 33% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --border: 214 25% 89%;
+    --input: 214 24% 86%;
+    --ring: 190 90% 38%;
+    --primary: 190 90% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 30% 94%;
+    --secondary-foreground: 222 35% 18%;
+    --muted: 214 28% 95%;
+    --muted-foreground: 215 16% 45%;
+    --accent: 190 60% 94%;
+    --accent-foreground: 190 80% 24%;
+    --destructive: 350 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 0.8rem;
+    --chart-text: #64748b;
+    --chart-grid: rgba(100, 116, 139, .15);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 220 38% 10%;
+    --card-foreground: 210 40% 96%;
+    --border: 218 28% 18%;
+    --input: 218 28% 22%;
+    --ring: 187 92% 51%;
+    --primary: 187 92% 44%;
+    --primary-foreground: 222 60% 7%;
+    --secondary: 218 30% 16%;
+    --secondary-foreground: 210 40% 94%;
+    --muted: 219 29% 14%;
+    --muted-foreground: 215 17% 65%;
+    --accent: 190 50% 14%;
+    --accent-foreground: 186 85% 73%;
+    --destructive: 350 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --chart-text: #94a3b8;
+    --chart-grid: rgba(148, 163, 184, .12);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    min-width: 320px;
+    background: hsl(var(--background));
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / .24);
+  }
+
+  :focus-visible {
+    outline: none;
+  }
+
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    opacity: .55;
+  }
+
+  pre, code, .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .page-grid {
+    background-image:
+      linear-gradient(hsl(var(--border) / .17) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / .17) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 540px);
+  }
+
+  .metric-number {
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .scrollbar-thin {
+    scrollbar-color: hsl(var(--muted-foreground) / .25) transparent;
+    scrollbar-width: thin;
+  }
+
+  .data-table th {
+    @apply h-10 whitespace-nowrap border-b border-border px-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .data-table td {
+    @apply border-b border-border/70 px-3 py-3 align-middle text-sm;
+  }
+
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-muted/45;
+  }
+}
