@@ -66,12 +66,18 @@ func (policy hostPolicy) allows(authority string) bool {
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
+		if policy.wildcard {
+			return true
+		}
 		return !policy.wildcard && policy.listenIP == nil && host == policy.listenHost
 	}
 	if ip.IsUnspecified() || ip.IsMulticast() {
 		return false
 	}
 	if ip.IsLoopback() {
+		return true
+	}
+	if policy.wildcard {
 		return true
 	}
 	if !policy.wildcard && policy.listenIP != nil && ip.Equal(policy.listenIP) {

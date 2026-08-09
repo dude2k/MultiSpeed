@@ -7,6 +7,7 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 ### Fixed
 
 - Plot dashboard throughput on a proportional time axis and keep each task's measurements independent from unrelated task timestamps.
+- Accept valid LAN hostnames and unicast IPs without a per-host allowlist when listening on `0.0.0.0` or `[::]`.
 
 ## [1.0.0] - 2026-08-09
 

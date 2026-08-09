@@ -13,7 +13,7 @@ Security fixes are provided for the latest tagged release. The `main` branch is 
 
 MultiSpeed does not include authentication and must only be exposed to trusted networks unless protected by an authenticating reverse proxy.
 
-The application defaults to `127.0.0.1:8787`. The Compose example listens on the trusted LAN through host networking and therefore requires host firewall policy. All requests enforce a local or explicitly trusted Host authority; configure proxy/LAN DNS names through `APP_TRUSTED_HOSTS`. Do not expose it directly to the internet. Backups, exports, results, task definitions, source addresses, route snapshots, public IPs, and provider diagnostics can be sensitive.
+The application defaults to `127.0.0.1:8787`. The Compose example listens on the trusted LAN through host networking and therefore requires host firewall policy. A wildcard bind accepts any syntactically valid hostname or unicast IP on the listen port; a specific bind can authorize additional proxy/LAN names through `APP_TRUSTED_HOSTS`. Do not expose it directly to the internet. Backups, exports, results, task definitions, source addresses, route snapshots, public IPs, and provider diagnostics can be sensitive.
 
 The supported container drops every Linux capability, uses `no-new-privileges`, runs non-root, has a read-only root filesystem, and receives no Docker socket or host-root mount. A report that requires `privileged`, `CAP_NET_ADMIN`, arbitrary command hooks, wildcard CORS, or hidden authentication is not an acceptable fix.
 

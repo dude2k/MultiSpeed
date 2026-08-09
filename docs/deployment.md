@@ -34,7 +34,7 @@ id -g
 
 Set those values as `MULTISPEED_UID` and `MULTISPEED_GID` in `.env`. Ensure `./data` is owned and writable by that identity. Do not use UID 0.
 
-Review `APP_LISTEN_ADDR`. Compose defaults to `0.0.0.0:8787` for a trusted LAN; use `127.0.0.1:8787` when only a local reverse proxy should connect. Add every DNS name through which users reach the service to the comma-separated `APP_TRUSTED_HOSTS`; IPs assigned to the host and loopback are accepted automatically.
+Review `APP_LISTEN_ADDR`. Compose defaults to `0.0.0.0:8787` for a trusted LAN and accepts every syntactically valid host on port 8787 without an allowlist; use `127.0.0.1:8787` when only a local reverse proxy should connect. With a specific bind address, add additional DNS names through `APP_TRUSTED_HOSTS`; assigned host IPs and loopback are accepted automatically.
 
 Custom LibreSpeed backends require a separate deployment-owned allowlist. Put their exact base URLs in comma-separated `APP_ALLOWED_CUSTOM_SERVER_URLS`; leave it empty to disable custom URLs. Entries may use HTTPS or HTTP and may include a safe base path and explicit port, but not credentials, queries, fragments, IPv6 zones, encoded/traversal-like paths, or ambiguous host syntax. Plain HTTP still requires the task's explicit `allowInsecure` setting. Changing this environment variable requires recreating the service.
 

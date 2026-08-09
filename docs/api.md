@@ -2,7 +2,7 @@
 
 MultiSpeed exposes a same-origin JSON API under `/api/v1`. The normative OpenAPI 3.1 document is [openapi.yaml](../openapi.yaml).
 
-There is no authentication. The process defaults to loopback, every request validates its `Host`, cross-origin API access is disabled, and browser mutation requests validate `Origin`. An absent `Origin` remains usable for trusted command-line automation on the same protected network; network access to the listener is the security boundary. `APP_TRUSTED_HOSTS` explicitly opts exact proxy or LAN DNS names into the Host policy.
+There is no authentication. The process defaults to loopback, every request validates its `Host` syntax and listen port, cross-origin API access is disabled, and browser mutation requests validate `Origin`. An absent `Origin` remains usable for trusted command-line automation on the same protected network; network access to the listener is the security boundary. A wildcard bind accepts all valid hostnames and unicast IPs, while a specific bind can add exact proxy or LAN names through `APP_TRUSTED_HOSTS`.
 
 ## Conventions
 

@@ -61,7 +61,7 @@ curl --fail http://127.0.0.1:8787/api/v1/healthz
 curl --fail http://127.0.0.1:8787/api/v1/readyz
 ```
 
-Compose intentionally sets `APP_LISTEN_ADDR=0.0.0.0:8787` for trusted-LAN access. Restrict traffic with host firewall rules or place an authenticating, TLS-terminating reverse proxy in front. Requests are accepted only for localhost, loopback or assigned host IPs, and exact names configured through `APP_TRUSTED_HOSTS`; this protects the unauthenticated listener from DNS-rebinding Host headers. Never expose port 8787 directly to the public internet.
+Compose intentionally sets `APP_LISTEN_ADDR=0.0.0.0:8787` for trusted-LAN access. A wildcard bind accepts any syntactically valid HTTP host on port 8787, so no per-host allowlist is required. Restrict traffic with host firewall rules or place an authenticating, TLS-terminating reverse proxy in front. Never expose port 8787 directly to the public internet.
 
 To use a published image explicitly:
 
@@ -132,7 +132,7 @@ Process configuration is intentionally small; persisted runtime settings are man
 | Variable | Safe process default | Compose default | Purpose |
 | --- | --- | --- | --- |
 | `APP_LISTEN_ADDR` | `127.0.0.1:8787` | `0.0.0.0:8787` | HTTP listen address |
-| `APP_TRUSTED_HOSTS` | empty | empty | Comma-separated exact proxy/LAN DNS names or IPs accepted as HTTP hosts; no schemes, paths, wildcards, or ports |
+| `APP_TRUSTED_HOSTS` | empty | empty | Comma-separated exact proxy/LAN DNS names or IPs accepted when binding to a specific host; unnecessary with `0.0.0.0` or `[::]` |
 | `APP_ALLOWED_CUSTOM_SERVER_URLS` | empty | empty | Comma-separated exact LibreSpeed custom backend base URLs; empty disables custom URLs, and plain HTTP additionally requires the task's explicit insecure opt-in |
 | `APP_DATA_DIR` | `/data` | `/data` | Database and backup directory |
 | `APP_LOG_LEVEL` | `INFO` | `INFO` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |

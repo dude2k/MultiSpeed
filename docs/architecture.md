@@ -82,7 +82,7 @@ Task and route-profile deletion is logical deletion: scheduler visibility is rem
 
 ## HTTP and browser security
 
-MultiSpeed deliberately has no authentication. The process default listener is loopback. Every request must use localhost, loopback, a currently assigned host IP, the concrete listen host, or an exact `APP_TRUSTED_HOSTS` entry; this closes the DNS-rebinding gap before routing. Browser mutations additionally require a same-origin `Origin`; cross-origin API access is not enabled. Middleware adds request IDs, body/response limits, JSON content checks, security headers, a restrictive CSP, sanitized error envelopes, and focused rate limits.
+MultiSpeed deliberately has no authentication. The process default listener is loopback. A specific listen host accepts localhost, loopback, assigned host IPs, the concrete listen host, and exact `APP_TRUSTED_HOSTS` entries. A wildcard bind intentionally accepts any syntactically valid hostname or unicast IP on the listen port and therefore relies on the trusted-network boundary. Browser mutations additionally require a same-origin `Origin`; cross-origin API access is not enabled. Middleware adds request IDs, body/response limits, JSON content checks, security headers, a restrictive CSP, sanitized error envelopes, and focused rate limits.
 
 The frontend ships no CDN assets and talks only to relative `/api/v1` URLs. Remote access belongs behind an authenticating reverse proxy, TLS, and network policy.
 
