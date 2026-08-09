@@ -4,6 +4,10 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+### Fixed
+
+- Plot dashboard throughput on a proportional time axis and keep each task's measurements independent from unrelated task timestamps.
+
 ## [1.0.0] - 2026-08-09
 
 ### Added

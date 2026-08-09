@@ -151,27 +151,30 @@ function latestSuccessfulMeasurement(series: StatisticsResponse['series']): { ta
   return samples.sort((left, right) => bucketKey(right.bucket).localeCompare(bucketKey(left.bucket)))[0] ?? null
 }
 
-function throughputOption(series: StatisticsResponse['series'], tasks: Task[], formatBitrate: (value: number | null | undefined, compact?: boolean) => string, formatDateTime: (value: string | null | undefined, withSeconds?: boolean) => string): ChartOption {
+export function throughputOption(series: StatisticsResponse['series'], tasks: Task[], formatBitrate: (value: number | null | undefined, compact?: boolean) => string, formatDateTime: (value: string | null | undefined, withSeconds?: boolean) => string): ChartOption {
   const text = chartTextColor()
   const grid = chartGridColor()
   const entries = series ?? []
-  const timestamps = [...new Set(entries.flatMap((entry) => entry.buckets.map(bucketKey)).filter(Boolean))].sort()
   const colors = [providerColors.ookla, providerColors.librespeed, providerColors.cloudflare, '#34d399', '#f472b6', '#facc15']
   const chartSeries = entries.flatMap((entry, index) => {
     const task = tasks.find((item) => item.id === entry.id)
     const label = task ? `${task.name} · ${task.interfaceName}` : entry.name
     const color = colors[index % colors.length] ?? providerColors.ookla
-    const byTimestamp = new Map(entry.buckets.map((bucket) => [bucketKey(bucket), bucket]))
+    const metricPoints = (metric: 'download' | 'upload') => entry.buckets.flatMap((bucket) => {
+      const timestamp = bucketKey(bucket)
+      const value = bucket[metric]?.average
+      return timestamp && value != null ? [[timestamp, value] as [string, number]] : []
+    }).sort(([left], [right]) => left.localeCompare(right))
     return [
-      { name: `${label} download`, type: 'line' as const, smooth: 0.18, showSymbol: timestamps.length < 25, symbolSize: 4, data: timestamps.map((timestamp) => byTimestamp.get(timestamp)?.download?.average ?? null), connectNulls: false, lineStyle: { width: 2, color }, itemStyle: { color } },
-      { name: `${label} upload`, type: 'line' as const, smooth: 0.18, showSymbol: false, data: timestamps.map((timestamp) => byTimestamp.get(timestamp)?.upload?.average ?? null), connectNulls: false, lineStyle: { width: 1, type: 'dashed' as const, color }, itemStyle: { color } },
+      { name: `${label} download`, type: 'line' as const, smooth: false, showSymbol: entry.buckets.length < 25, symbolSize: 4, data: metricPoints('download'), connectNulls: false, lineStyle: { width: 2, color }, itemStyle: { color } },
+      { name: `${label} upload`, type: 'line' as const, smooth: false, showSymbol: false, data: metricPoints('upload'), connectNulls: false, lineStyle: { width: 1, type: 'dashed' as const, color }, itemStyle: { color } },
     ]
   })
   return {
-    tooltip: { trigger: 'axis', backgroundColor: 'rgba(8,17,31,.94)', borderColor: 'rgba(148,163,184,.22)', textStyle: { color: '#e2e8f0', fontSize: 11 }, valueFormatter: (value) => formatBitrate(Number(value)) },
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(8,17,31,.94)', borderColor: 'rgba(148,163,184,.22)', textStyle: { color: '#e2e8f0', fontSize: 11 }, valueFormatter: (value) => formatBitrate(Number(Array.isArray(value) ? value[1] : value)) },
     legend: { right: 0, top: 0, type: 'scroll', textStyle: { color: text, fontSize: 10 } },
     grid: { left: 8, right: 12, top: 38, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: timestamps.map((timestamp) => formatDateTime(timestamp)), axisLabel: { color: text, fontSize: 10, hideOverlap: true }, axisLine: { lineStyle: { color: grid } }, axisTick: { show: false } },
+    xAxis: { type: 'time', axisLabel: { color: text, fontSize: 10, hideOverlap: true, formatter: (value: number) => formatDateTime(new Date(value).toISOString()) }, axisLine: { lineStyle: { color: grid } }, axisTick: { show: false } },
     yAxis: { type: 'value', axisLabel: { color: text, fontSize: 10, formatter: (value: number) => formatBitrate(value, true) }, splitLine: { lineStyle: { color: grid } } },
     series: chartSeries,
   }
