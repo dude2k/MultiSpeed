@@ -144,6 +144,7 @@ describe('task editor', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }))
     await user.click(screen.getByRole('button', { name: /continue/i }))
     expect(await screen.findByText(/Ookla tasks may be saved before the operator-installed CLI is available/i)).toBeVisible()
+    expect(create).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /create task/i }))
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ enabled: true, provider: 'ookla' })))
     expect(validate).not.toHaveBeenCalled()

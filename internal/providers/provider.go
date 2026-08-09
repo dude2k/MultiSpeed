@@ -43,9 +43,9 @@ const (
 )
 
 type Availability struct {
-	Available            bool                `json:"available"`
-	Version              string              `json:"version"`
-	Message              string              `json:"message"`
+	Available            bool                 `json:"available"`
+	Version              string               `json:"version"`
+	Message              string               `json:"message"`
 	UnavailabilityReason UnavailabilityReason `json:"-"`
 }
 

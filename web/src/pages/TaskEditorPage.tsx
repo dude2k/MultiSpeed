@@ -316,7 +316,7 @@ export default function TaskEditorPage() {
           <div className="mt-5 flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-panel">
             <Button variant="outline" onClick={() => setStep((current) => Math.max(current - 1, 0))} disabled={step === 0 || saveMutation.isPending}><ArrowLeft className="h-4 w-4" />Previous</Button>
             <div className="text-center text-[11px] text-muted-foreground">Step {step + 1} of {steps.length}</div>
-            {step < steps.length - 1 ? <Button onClick={() => void nextStep()}>Continue<ArrowRight className="h-4 w-4" /></Button> : <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? <Spinner /> : <Save className="h-4 w-4" />}{editing ? 'Save changes' : 'Create task'}</Button>}
+            {step < steps.length - 1 ? <Button onClick={(event) => { event.preventDefault(); void nextStep() }}>Continue<ArrowRight className="h-4 w-4" /></Button> : <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? <Spinner /> : <Save className="h-4 w-4" />}{editing ? 'Save changes' : 'Create task'}</Button>}
           </div>
         </div>
       </div>
