@@ -4,6 +4,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-09
+
 ### Fixed
 
 - Plot dashboard throughput on a proportional time axis and keep each task's measurements independent from unrelated task timestamps.
@@ -43,5 +45,6 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/dude2k/MultiSpeed/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/dude2k/MultiSpeed/releases/tag/v1.0.0

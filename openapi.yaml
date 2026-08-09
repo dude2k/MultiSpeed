@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: MultiSpeed API
-  version: 1.0.0
+  version: 1.0.1
   summary: Multi-WAN speed-test scheduling, execution, routing, and statistics API
   description: |
     Same-origin API for MultiSpeed. There is deliberately no authentication.
