@@ -36,9 +36,10 @@ type providerServerValidationInput struct {
 }
 
 type providerPreflightError struct {
-	code     string
-	fallback string
-	err      error
+	code                 string
+	fallback             string
+	err                  error
+	unavailabilityReason providers.UnavailabilityReason
 }
 
 func (err *providerPreflightError) Error() string { return err.err.Error() }
@@ -172,7 +173,12 @@ func (s *Server) preflightProviderTarget(ctx context.Context, provider providers
 		if message == "" {
 			message = "The selected provider is unavailable."
 		}
-		return newProviderPreflightError("PROVIDER_UNAVAILABLE", "The selected provider is unavailable.", errors.New(message))
+		return &providerPreflightError{
+			code:                 "PROVIDER_UNAVAILABLE",
+			fallback:             "The selected provider is unavailable.",
+			err:                  errors.New(message),
+			unavailabilityReason: availability.UnavailabilityReason,
+		}
 	}
 	target := input.target()
 	validationContext, cancelValidation := context.WithTimeout(ctx, providerProbeTimeout)

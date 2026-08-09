@@ -121,6 +121,17 @@ describe('network, settings, and system operations pages', () => {
     expect(screen.getByText('192.0.2.10')).toBeVisible()
   })
 
+  it('renders an interface without addresses instead of crashing the system page', async () => {
+    vi.spyOn(api, 'system').mockResolvedValue({
+      ...system,
+      interfaces: [{ ...system.interfaces[0], addresses: null }],
+    } as unknown as SystemInfo)
+    vi.spyOn(api, 'health').mockResolvedValue({ status: 'healthy' })
+    renderPage(<SystemPage />, { route: '/system' })
+    expect(await screen.findByText('Interface snapshot')).toBeVisible()
+    expect(screen.getByText('eth0')).toBeVisible()
+  })
+
   it('offers a retry when system facts cannot be loaded', async () => {
     vi.spyOn(api, 'system').mockRejectedValue(new Error('System endpoint unavailable'))
     vi.spyOn(api, 'health').mockResolvedValue({ status: 'healthy' })

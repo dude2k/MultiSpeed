@@ -283,6 +283,71 @@ func TestEnabledTaskPreflightFailureKeepsDisabledDraftUnscheduled(t *testing.T) 
 	}
 }
 
+func TestEnabledOoklaTaskCanBePersistedWhileOperatorCLIIsUnavailable(t *testing.T) {
+	var availabilityCalls atomic.Int32
+	provider := &providerStub{
+		id: models.ProviderOokla,
+		availability: func(context.Context) providers.Availability {
+			availabilityCalls.Add(1)
+			return providers.Availability{Available: false, Message: "The operator-installed Ookla 'speedtest' executable was not found. It is not distributed with MultiSpeed.", UnavailabilityReason: providers.UnavailabilityReasonRuntime}
+		},
+	}
+	validator := &recordingRouteValidator{result: models.RouteValidation{Success: true}}
+	handler, store := providerTaskTestHandler(t, validator, provider, "192.0.2.10")
+	body := map[string]any{
+		"name": "Deferred Ookla runtime", "enabled": true, "provider": "ookla",
+		"interfaceName": "wan-test", "sourceIp": "192.0.2.10", "ipFamily": "ipv4",
+	}
+
+	created := performTaskMutation(t, handler, http.MethodPost, "/api/v1/tasks", body, http.StatusCreated)
+	if !created.Enabled || created.NextScheduledAt == nil {
+		t.Fatalf("enabled Ookla task was not persisted and scheduled: %+v", created)
+	}
+	body["name"] = "Updated deferred Ookla runtime"
+	updated := performTaskMutation(t, handler, http.MethodPut, "/api/v1/tasks/"+created.ID, body, http.StatusOK)
+	if updated.Name != body["name"] || !updated.Enabled || updated.NextScheduledAt == nil {
+		t.Fatalf("unavailable Ookla task was not updated: %+v", updated)
+	}
+	loaded, err := store.GetTask(context.Background(), created.ID)
+	if err != nil || loaded.Name != body["name"] || !loaded.Enabled {
+		t.Fatalf("persisted Ookla task=%+v err=%v", loaded, err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "http://multispeed.local/api/v1/tasks/"+created.ID+"/validate", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "operator-installed Ookla") {
+		t.Fatalf("explicit validation did not fail closed: status=%d body=%s", response.Code, response.Body.String())
+	}
+	if availabilityCalls.Load() != 3 || validator.calls != 0 {
+		t.Fatalf("unexpected provider checks: availability=%d routes=%d", availabilityCalls.Load(), validator.calls)
+	}
+}
+
+func TestEnabledOoklaTaskStillRequiresVerifiedEULAAcceptance(t *testing.T) {
+	provider := &providerStub{
+		id: models.ProviderOokla,
+		availability: func(context.Context) providers.Availability {
+			return providers.Availability{Available: false, Message: "Ookla EULA acceptance is required.", UnavailabilityReason: providers.UnavailabilityReasonPolicy}
+		},
+	}
+	validator := &recordingRouteValidator{result: models.RouteValidation{Success: true}}
+	handler, store := providerTaskTestHandler(t, validator, provider, "192.0.2.10")
+	body := map[string]any{
+		"name": "Unaccepted Ookla task", "enabled": true, "provider": "ookla",
+		"interfaceName": "wan-test", "sourceIp": "192.0.2.10", "ipFamily": "ipv4",
+	}
+
+	response := performTaskMutationRaw(t, handler, http.MethodPost, "/api/v1/tasks", body)
+	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "EULA acceptance is required") {
+		t.Fatalf("unaccepted Ookla create status=%d body=%s", response.Code, response.Body.String())
+	}
+	tasks, err := store.ListTasks(context.Background())
+	if err != nil || len(tasks) != 0 {
+		t.Fatalf("unaccepted Ookla task was persisted: count=%d err=%v", len(tasks), err)
+	}
+}
+
 func TestEnabledTaskEditPreflightFailurePreservesOldScheduledConfiguration(t *testing.T) {
 	var available atomic.Bool
 	available.Store(true)

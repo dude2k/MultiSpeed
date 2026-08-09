@@ -160,7 +160,12 @@ export const api = {
   cleanupResults: (before?: string) => request<{ deletedResults?: number; deleted?: number; batches?: number; durationMilliseconds?: number }>('/retention/cleanup', { method: 'POST', body: JSON.stringify(before ? { before } : {}) }),
   system: async (): Promise<SystemInfo> => {
     const value = await request<RawSystemInfo>('/system')
-    return { ...value, providers: Array.isArray(value.providers) ? value.providers.map(normalizeProvider) : [], buildDate: value.buildDate || value.buildTime || '' }
+    return {
+      ...value,
+      providers: Array.isArray(value.providers) ? value.providers.map(normalizeProvider) : [],
+      interfaces: Array.isArray(value.interfaces) ? value.interfaces.map(normalizeSystemInterface) : [],
+      buildDate: value.buildDate || value.buildTime || '',
+    }
   },
   exportUrl: (format: 'csv' | 'json', params: ResultsQuery = {}) => {
     const { interfaceName, ...rest } = params
@@ -190,10 +195,19 @@ interface RawProviderDescriptor {
   message?: string
 }
 
-type RawSystemInfo = Omit<SystemInfo, 'providers' | 'buildDate'> & {
+type RawSystemInfo = Omit<SystemInfo, 'providers' | 'interfaces' | 'buildDate'> & {
   providers: Array<Provider | RawProviderDescriptor>
+  interfaces?: RawSystemInterface[] | null
   buildDate?: string
   buildTime?: string
+}
+
+type RawSystemInterface = Omit<NetworkInterface, 'addresses'> & {
+  addresses?: NetworkInterface['addresses'] | null
+}
+
+function normalizeSystemInterface(value: RawSystemInterface): NetworkInterface {
+  return { ...value, addresses: Array.isArray(value.addresses) ? value.addresses : [] }
 }
 
 interface StatisticsApiSummary {

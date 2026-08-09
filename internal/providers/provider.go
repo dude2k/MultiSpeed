@@ -35,10 +35,18 @@ type Capabilities struct {
 	ResultURLs           bool `json:"resultUrls"`
 }
 
+type UnavailabilityReason string
+
+const (
+	UnavailabilityReasonPolicy  UnavailabilityReason = "policy"
+	UnavailabilityReasonRuntime UnavailabilityReason = "runtime"
+)
+
 type Availability struct {
-	Available bool   `json:"available"`
-	Version   string `json:"version"`
-	Message   string `json:"message"`
+	Available            bool                `json:"available"`
+	Version              string              `json:"version"`
+	Message              string              `json:"message"`
+	UnavailabilityReason UnavailabilityReason `json:"-"`
 }
 
 type Server struct {

@@ -4,6 +4,11 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+### Fixed
+
+- Allow accepted Ookla tasks to be saved before the separately installed CLI is available, while keeping validation and execution fail-closed.
+- Render System Information when a detected interface has no addresses instead of crashing the page.
+
 ## [1.0.1] - 2026-08-09
 
 ### Fixed

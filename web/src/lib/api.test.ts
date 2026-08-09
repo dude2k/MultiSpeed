@@ -94,7 +94,10 @@ describe('API contract adapters', () => {
       .mockResolvedValueOnce(jsonResponse({
         version: '1.0.0', gitCommit: 'abcdef0', buildTime: '2026-08-05T07:00:00Z', goVersion: 'go1.25', operatingSystem: 'linux', architecture: 'amd64',
         databasePath: '/data/multispeed.db', databaseSizeBytes: 1024, schemaVersion: 1, uptimeSeconds: 60, taskCount: 1, resultCount: 2, runningTaskCount: 0,
-        providers: [provider], interfaces: [],
+        providers: [provider], interfaces: [{
+          name: 'eth0', index: 2, operational: true, loopback: false, virtual: false,
+          macAddress: '', mtu: 1500, addresses: null,
+        }],
       }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -104,6 +107,7 @@ describe('API contract adapters', () => {
     expect(providers[0]).toMatchObject({ available: true, version: '1.0.12', message: 'Ready' })
     expect(system.buildDate).toBe('2026-08-05T07:00:00Z')
     expect(system.providers[0]).toMatchObject({ available: true, version: '1.0.12', message: 'Ready' })
+    expect(system.interfaces[0]?.addresses).toEqual([])
   })
 
   it('downloads the SQLite backup response as a named blob', async () => {

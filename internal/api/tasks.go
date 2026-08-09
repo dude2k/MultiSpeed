@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -361,6 +362,14 @@ func (s *Server) validateTransientTask(w http.ResponseWriter, r *http.Request) {
 func (s *Server) requireEnabledTaskPreflight(w http.ResponseWriter, r *http.Request, task models.Task) bool {
 	validation, err := s.preflightTaskPath(r.Context(), task)
 	if err != nil {
+		var failure *providerPreflightError
+		// Ookla's proprietary CLI is installed and maintained separately by the
+		// operator. Keep task persistence independent from that optional runtime
+		// dependency; explicit validation and every execution still fail closed
+		// through the unchanged provider availability check.
+		if task.Provider == models.ProviderOokla && errors.As(err, &failure) && failure.code == "PROVIDER_UNAVAILABLE" && failure.unavailabilityReason == providers.UnavailabilityReasonRuntime {
+			return true
+		}
 		writeError(w, r, http.StatusUnprocessableEntity, "TASK_PREFLIGHT_FAILED", providerErrorMessage(err, "The enabled task preflight failed."))
 		return false
 	}

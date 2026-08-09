@@ -123,6 +123,32 @@ describe('task editor', () => {
     expect(screen.getByText(/Persisted server ID:/i)).toHaveTextContent('42')
   })
 
+  it('saves an enabled Ookla task without requiring the unavailable CLI preflight', async () => {
+    mockEditorApi()
+    const validate = vi.spyOn(api, 'validateTaskInput')
+    const create = vi.spyOn(api, 'createTask').mockImplementation((input) => Promise.resolve({
+      id: 'ookla-task', ...input, description: input.description ?? '', cronExpression: input.cronExpression ?? '0 */6 * * *',
+      timezone: input.timezone ?? 'UTC', randomJitterSeconds: input.randomJitterSeconds ?? 0,
+      serverSelectionMode: input.serverSelectionMode ?? 'automatic', serverId: input.serverId ?? '', serverUrl: input.serverUrl ?? '',
+      customServerDefinition: input.customServerDefinition ?? {}, ipFamily: input.ipFamily ?? 'auto', routeProfileId: input.routeProfileId ?? null,
+      timeoutSeconds: input.timeoutSeconds ?? 120, providerOptions: input.providerOptions ?? {}, preventOverlap: input.preventOverlap ?? true,
+      routeValidation: input.routeValidation ?? 'required', createdAt: '', updatedAt: '', lastScheduledAt: null, nextScheduledAt: '',
+    }))
+    const user = userEvent.setup()
+    renderPage(<TaskEditorPage />, { route: '/tasks/new' })
+    await screen.findByText('Identity & measurement provider')
+    await user.type(screen.getByPlaceholderText('Fiber uplink · Frankfurt'), 'Ookla later')
+    await user.click(screen.getByRole('button', { name: /Ookla Speedtest/i }))
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    await selectSourcePath(user)
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    expect(await screen.findByText(/Ookla tasks may be saved before the operator-installed CLI is available/i)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /create task/i }))
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ enabled: true, provider: 'ookla' })))
+    expect(validate).not.toHaveBeenCalled()
+  })
+
   it('discovers LibreSpeed servers and reveals intentional virtual WAN paths', async () => {
     mockEditorApi()
     const user = userEvent.setup()

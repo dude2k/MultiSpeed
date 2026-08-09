@@ -47,17 +47,17 @@ func (*Adapter) Capabilities() providers.Capabilities {
 func (a *Adapter) Availability(ctx context.Context) providers.Availability {
 	accepted, err := a.acceptance(ctx)
 	if err != nil {
-		return providers.Availability{Message: "Ookla is disabled because EULA acceptance could not be verified."}
+		return providers.Availability{Message: "Ookla is disabled because EULA acceptance could not be verified.", UnavailabilityReason: providers.UnavailabilityReasonPolicy}
 	}
 	if !accepted {
-		return providers.Availability{Message: "Ookla is disabled. Review its current terms and explicitly record EULA acceptance in MultiSpeed settings before use."}
+		return providers.Availability{Message: "Ookla is disabled. Review its current terms and explicitly record EULA acceptance in MultiSpeed settings before use.", UnavailabilityReason: providers.UnavailabilityReasonPolicy}
 	}
 	if _, err := exec.LookPath(a.binary); err != nil {
-		return providers.Availability{Message: "The operator-installed Ookla 'speedtest' executable was not found. It is not distributed with MultiSpeed."}
+		return providers.Availability{Message: "The operator-installed Ookla 'speedtest' executable was not found. It is not distributed with MultiSpeed.", UnavailabilityReason: providers.UnavailabilityReasonRuntime}
 	}
 	version, err := a.Version(ctx)
 	if err != nil {
-		return providers.Availability{Message: "The Ookla executable was found but could not be queried: " + providers.SanitizeOutput(err.Error(), 512)}
+		return providers.Availability{Message: "The Ookla executable was found but could not be queried: " + providers.SanitizeOutput(err.Error(), 512), UnavailabilityReason: providers.UnavailabilityReasonRuntime}
 	}
 	return providers.Availability{Available: true, Version: version, Message: "Operator-installed CLI; use is governed by Ookla's terms."}
 }

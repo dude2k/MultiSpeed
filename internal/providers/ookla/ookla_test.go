@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/dude2k/MultiSpeed/internal/providers"
 )
 
 func TestAvailabilityRechecksPersistedAcceptanceWithoutRestart(t *testing.T) {
@@ -13,12 +15,12 @@ func TestAvailabilityRechecksPersistedAcceptanceWithoutRestart(t *testing.T) {
 		return accepted, nil
 	}, nil)
 	availability := adapter.Availability(context.Background())
-	if availability.Available || !strings.Contains(availability.Message, "record EULA acceptance") {
+	if availability.Available || availability.UnavailabilityReason != providers.UnavailabilityReasonPolicy || !strings.Contains(availability.Message, "record EULA acceptance") {
 		t.Fatalf("unexpected unaccepted availability: %+v", availability)
 	}
 	accepted = true
 	availability = adapter.Availability(context.Background())
-	if availability.Available || !strings.Contains(availability.Message, "executable was not found") {
+	if availability.Available || availability.UnavailabilityReason != providers.UnavailabilityReasonRuntime || !strings.Contains(availability.Message, "executable was not found") {
 		t.Fatalf("acceptance did not advance to binary validation: %+v", availability)
 	}
 }
@@ -28,7 +30,7 @@ func TestAvailabilityFailsClosedWhenAcceptanceCannotBeVerified(t *testing.T) {
 		return false, errors.New("database unavailable")
 	}, nil)
 	availability := adapter.Availability(context.Background())
-	if availability.Available || !strings.Contains(availability.Message, "could not be verified") {
+	if availability.Available || availability.UnavailabilityReason != providers.UnavailabilityReasonPolicy || !strings.Contains(availability.Message, "could not be verified") {
 		t.Fatalf("unexpected availability: %+v", availability)
 	}
 }
