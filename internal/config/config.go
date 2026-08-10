@@ -29,6 +29,7 @@ type Config struct {
 	DatabasePath            string
 	LogLevel                slog.Level
 	AcceptOoklaEULA         bool
+	AllowOoklaBinaryUpload  bool
 	OoklaBinary             string
 	LibreSpeedBinary        string
 	ShutdownTimeout         time.Duration
@@ -71,7 +72,8 @@ func Load(version, commit, buildTime string) (Config, error) {
 		DatabasePath:            filepath.Join(dataDir, "multispeed.db"),
 		LogLevel:                level,
 		AcceptOoklaEULA:         envBool("ACCEPT_OOKLA_EULA", false),
-		OoklaBinary:             env("OOKLA_BINARY", "speedtest"),
+		AllowOoklaBinaryUpload:  envBool("APP_ALLOW_OOKLA_BINARY_UPLOAD", false),
+		OoklaBinary:             env("OOKLA_BINARY", filepath.Join(dataDir, "providers", "ookla", "speedtest")),
 		LibreSpeedBinary:        env("LIBRESPEED_BINARY", "librespeed-cli"),
 		ShutdownTimeout:         shutdown,
 		Version:                 version,

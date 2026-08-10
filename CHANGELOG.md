@@ -4,6 +4,12 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-08-10
+
+### Added
+
+- Add an explicit, deployment-opted-in UI/API flow for atomically validating and persistently installing a separately obtained Linux amd64 Speedtest by Ookla executable.
+
 ## [1.0.2] - 2026-08-09
 
 ### Fixed
@@ -53,7 +59,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/dude2k/MultiSpeed/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/dude2k/MultiSpeed/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/dude2k/MultiSpeed/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/dude2k/MultiSpeed/releases/tag/v1.0.0

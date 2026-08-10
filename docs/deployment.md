@@ -38,6 +38,8 @@ Review `APP_LISTEN_ADDR`. Compose defaults to `0.0.0.0:8787` for a trusted LAN a
 
 Custom LibreSpeed backends require a separate deployment-owned allowlist. Put their exact base URLs in comma-separated `APP_ALLOWED_CUSTOM_SERVER_URLS`; leave it empty to disable custom URLs. Entries may use HTTPS or HTTP and may include a safe base path and explicit port, but not credentials, queries, fragments, IPv6 zones, encoded/traversal-like paths, or ambiguous host syntax. Plain HTTP still requires the task's explicit `allowInsecure` setting. Changing this environment variable requires recreating the service.
 
+Managed Ookla executable upload is separately fail-closed. Leave `APP_ALLOW_OOKLA_BINARY_UPLOAD=false` unless operators must install a separately obtained single-file Linux amd64 CLI through the UI. Enabling it permits a same-origin trusted client to supply code that MultiSpeed executes for version validation and later speed tests; use it only on a private trusted network or behind an authenticating reverse proxy. The managed path must remain beneath `APP_DATA_DIR` (the Compose default is `/data/providers/ookla/speedtest`).
+
 ## Start or upgrade
 
 ```bash

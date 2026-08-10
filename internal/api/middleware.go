@@ -120,8 +120,17 @@ func (s *Server) contentType(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) && r.ContentLength != 0 {
 			mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			if err != nil || !strings.EqualFold(mediaType, "application/json") {
-				writeError(w, r, http.StatusUnsupportedMediaType, "UNSUPPORTED_CONTENT_TYPE", "Use Content-Type: application/json.")
+			binaryUpload := r.Method == http.MethodPost && r.URL.Path == "/api/v1/providers/ookla/binary"
+			allowed := err == nil && strings.EqualFold(mediaType, "application/json")
+			if binaryUpload {
+				allowed = err == nil && strings.EqualFold(mediaType, "application/octet-stream")
+			}
+			if !allowed {
+				message := "Use Content-Type: application/json."
+				if binaryUpload {
+					message = "Use Content-Type: application/octet-stream for the Ookla executable."
+				}
+				writeError(w, r, http.StatusUnsupportedMediaType, "UNSUPPORTED_CONTENT_TYPE", message)
 				return
 			}
 		}

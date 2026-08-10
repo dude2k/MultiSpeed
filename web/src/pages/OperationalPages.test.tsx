@@ -48,6 +48,7 @@ describe('network, settings, and system operations pages', () => {
 
   it('requires explicit confirmation before recording Ookla EULA acceptance', async () => {
     vi.spyOn(api, 'settings').mockResolvedValue(fallbackSettings)
+    vi.spyOn(api, 'ooklaBinaryStatus').mockResolvedValue({ uploadEnabled: true, installed: false, maxUploadBytes: 64 * 1024 * 1024, message: 'Upload an executable.' })
     const update = vi.spyOn(api, 'updateOoklaEula').mockResolvedValue({
       ...fallbackSettings,
       ooklaEulaAccepted: true,
@@ -73,6 +74,7 @@ describe('network, settings, and system operations pages', () => {
   })
 
   it('shows an environment EULA override without offering a misleading revoke action', async () => {
+    vi.spyOn(api, 'ooklaBinaryStatus').mockResolvedValue({ uploadEnabled: false, installed: false, maxUploadBytes: 64 * 1024 * 1024, message: 'Manual upload disabled.' })
     vi.spyOn(api, 'settings').mockResolvedValue({
       ...fallbackSettings,
       ooklaEulaCurrentVersion: 'speedtest-eula-reviewed-2026-08-07',

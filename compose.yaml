@@ -31,12 +31,13 @@ services:
       APP_LISTEN_ADDR: ${APP_LISTEN_ADDR:-0.0.0.0:8787}
       APP_TRUSTED_HOSTS: ${APP_TRUSTED_HOSTS:-}
       APP_ALLOWED_CUSTOM_SERVER_URLS: ${APP_ALLOWED_CUSTOM_SERVER_URLS:-}
+      APP_ALLOW_OOKLA_BINARY_UPLOAD: ${APP_ALLOW_OOKLA_BINARY_UPLOAD:-false}
       APP_DATA_DIR: /data
       APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
       APP_SHUTDOWN_TIMEOUT: ${APP_SHUTDOWN_TIMEOUT:-20s}
       TZ: ${TZ:-Europe/Berlin}
       LIBRESPEED_BINARY: ${LIBRESPEED_BINARY:-/usr/local/bin/librespeed-cli}
-      OOKLA_BINARY: ${OOKLA_BINARY:-/opt/multispeed/providers/speedtest}
+      OOKLA_BINARY: ${OOKLA_BINARY:-/data/providers/ookla/speedtest}
       ACCEPT_OOKLA_EULA: ${ACCEPT_OOKLA_EULA:-false}
 
     healthcheck:

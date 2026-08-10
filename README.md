@@ -108,10 +108,9 @@ Read [Linux networking and policy routing](docs/networking.md) before enabling t
 The published image does not contain, download, or redistribute Ookla Speedtest CLI. Ookla's CLI terms are restrictive, including limitations relevant to server/container and commercial use. Before using it:
 
 1. Review the current Ookla EULA and obtain any necessary permission directly from Ookla.
-2. Install the official CLI outside MultiSpeed.
-3. Make the executable available to the container through an explicit read-only bind mount or build a private, non-redistributed image under terms that permit your use.
-4. Set `OOKLA_BINARY` to that in-container path.
-5. In **Settings → Ookla provider licensing**, review the current terms, explicitly confirm acceptance, and save it. Headless deployments may instead set `ACCEPT_OOKLA_EULA=true` as a process-level override.
+2. Obtain the official Linux amd64 executable separately from Ookla.
+3. Either expose it through an explicit read-only bind mount, or opt in to managed UI upload with `APP_ALLOW_OOKLA_BINARY_UPLOAD=true` and the default `/data/providers/ookla/speedtest` path.
+4. In **Settings → Ookla provider licensing**, review the current terms, explicitly confirm acceptance, and save it. Headless deployments may instead set `ACCEPT_OOKLA_EULA=true` as a process-level override.
 
 Persisted UI acceptance and `ACCEPT_OOKLA_EULA=true` only open MultiSpeed's technical gate; neither grants a license nor overrides Ookla's terms. Persisted acceptance records the reviewed EULA revision and requires renewed confirmation when MultiSpeed changes that revision. The UI identifies whether the effective gate comes from the database or the environment; an environment override must be cleared and MultiSpeed restarted before UI revocation can block Ookla. With neither form of acceptance, the adapter reports unavailable and other providers continue to work. A concrete bind-mount example is in [Provider behavior](docs/providers.md).
 
@@ -134,12 +133,13 @@ Process configuration is intentionally small; persisted runtime settings are man
 | `APP_LISTEN_ADDR` | `127.0.0.1:8787` | `0.0.0.0:8787` | HTTP listen address |
 | `APP_TRUSTED_HOSTS` | empty | empty | Comma-separated exact proxy/LAN DNS names or IPs accepted when binding to a specific host; unnecessary with `0.0.0.0` or `[::]` |
 | `APP_ALLOWED_CUSTOM_SERVER_URLS` | empty | empty | Comma-separated exact LibreSpeed custom backend base URLs; empty disables custom URLs, and plain HTTP additionally requires the task's explicit insecure opt-in |
+| `APP_ALLOW_OOKLA_BINARY_UPLOAD` | `false` | `false` | Enables same-origin upload and execution validation of one operator-supplied Linux amd64 Ookla executable; trusted private networks only |
 | `APP_DATA_DIR` | `/data` | `/data` | Database and backup directory |
 | `APP_LOG_LEVEL` | `INFO` | `INFO` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 | `APP_SHUTDOWN_TIMEOUT` | `20s` | `20s` | Graceful shutdown deadline |
 | `TZ` | Image default | `Europe/Berlin` | Container timezone data; tasks retain their own IANA timezone |
 | `LIBRESPEED_BINARY` | `librespeed-cli` | `/usr/local/bin/librespeed-cli` | LibreSpeed executable path |
-| `OOKLA_BINARY` | `speedtest` | `/opt/multispeed/providers/speedtest` | Optional external Ookla executable path |
+| `OOKLA_BINARY` | `/data/providers/ookla/speedtest` | `/data/providers/ookla/speedtest` | Managed or externally supplied Ookla executable path |
 | `ACCEPT_OOKLA_EULA` | `false` | `false` | Optional headless override for the persisted in-app acceptance gate |
 
 No environment-variable values are exposed by the system API.

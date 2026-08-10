@@ -28,6 +28,8 @@ Ookla Speedtest CLI is proprietary. MultiSpeed images do not include it, downloa
 
 Ookla's published terms include restrictions relevant to personal/non-commercial, server, container, and redistribution scenarios. Confirm your intended deployment directly against Ookla's current terms and obtain permission where necessary. The persisted **Settings → Ookla provider licensing** acknowledgement and the headless `ACCEPT_OOKLA_EULA` override are only technical gates; neither is legal advice nor a license grant.
 
+For a single-file installation, the task editor and Settings page can accept an operator-supplied Linux amd64 executable after EULA acceptance. This is disabled by default because the endpoint necessarily validates the uploaded file by executing it as the non-root container user. Set `APP_ALLOW_OOKLA_BINARY_UPLOAD=true` and keep `OOKLA_BINARY=/data/providers/ookla/speedtest` to opt in. The endpoint accepts only `application/octet-stream`, is rate- and size-limited to 64 MiB, rejects non-Linux-amd64 ELF files, requires recognizable Speedtest by Ookla version output, and atomically preserves the previous executable when validation fails. Enable it only on a trusted private network or behind an authenticating reverse proxy.
+
 When permitted, an operator-managed executable can be exposed read-only without changing the shipped service. For example, create a Compose override that still has one service:
 
 ```yaml

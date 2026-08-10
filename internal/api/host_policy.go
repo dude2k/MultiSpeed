@@ -15,6 +15,9 @@ type HTTPPolicy struct {
 	ListenAddress                string
 	TrustedHosts                 []string
 	OoklaEULAEnvironmentAccepted bool
+	DataDirectory                string
+	OoklaBinaryPath              string
+	AllowOoklaBinaryUpload       bool
 }
 
 type hostPolicy struct {

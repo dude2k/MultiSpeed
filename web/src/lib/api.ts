@@ -4,6 +4,8 @@ import type {
   ConfigurationImportResult,
   DashboardSummary,
   NetworkInterface,
+  OoklaBinaryInstallResult,
+  OoklaBinaryStatus,
   Page,
   Provider,
   ProviderServer,
@@ -146,6 +148,8 @@ export const api = {
   deleteRoute: (id: string) => request<void>(`/route-profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   validateRoute: (id: string) => requestValidation(`/route-profiles/${encodeURIComponent(id)}/validate`),
   providers: async () => itemsFrom(await request<Array<Provider | RawProviderDescriptor> | { items: Array<Provider | RawProviderDescriptor> }>('/providers')).map(normalizeProvider),
+  ooklaBinaryStatus: () => request<OoklaBinaryStatus>('/providers/ookla/binary'),
+  uploadOoklaBinary: (file: File) => uploadOoklaBinary(file),
   providerServers: async (provider: string, params: { search?: string; interfaceName?: string; sourceIp?: string; ipFamily?: string }) => {
     const { interfaceName, ...rest } = params
     return itemsFrom(await request<ProviderServer[] | { items: ProviderServer[] }>(`/providers/${encodeURIComponent(provider)}/servers${queryString({ ...rest, interface: interfaceName })}`))
@@ -335,6 +339,17 @@ async function downloadBackup(): Promise<{ blob: Blob; filename: string }> {
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const match = /filename="?([^";]+)"?/i.exec(disposition)
   return { blob: await response.blob(), filename: match?.[1] ?? 'multispeed-backup.db' }
+}
+
+async function uploadOoklaBinary(file: File): Promise<OoklaBinaryInstallResult> {
+  const response = await fetch(`${API_ROOT}/providers/ookla/binary`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/octet-stream' },
+    body: file,
+    credentials: 'same-origin',
+  })
+  if (!response.ok) throw await parseError(response)
+  return (await response.json()) as OoklaBinaryInstallResult
 }
 
 async function downloadConfiguration(): Promise<{ blob: Blob; filename: string }> {

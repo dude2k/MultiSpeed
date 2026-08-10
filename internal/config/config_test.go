@@ -1,10 +1,24 @@
 package config
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestLoadUsesManagedOoklaBinaryPathAndExplicitUploadOptIn(t *testing.T) {
+	dataDirectory := t.TempDir()
+	t.Setenv("APP_DATA_DIR", dataDirectory)
+	t.Setenv("APP_ALLOW_OOKLA_BINARY_UPLOAD", "true")
+	configuration, err := Load("test", "commit", "time")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if configuration.OoklaBinary != filepath.Join(dataDirectory, "providers", "ookla", "speedtest") || !configuration.AllowOoklaBinaryUpload {
+		t.Fatalf("unexpected Ookla upload config: path=%q enabled=%v", configuration.OoklaBinary, configuration.AllowOoklaBinaryUpload)
+	}
+}
 
 func TestParseTrustedHostsNormalizesAndDeduplicates(t *testing.T) {
 	hosts, err := parseTrustedHosts(" dashboard.example.test,192.0.2.10,DASHBOARD.example.test,2001:db8::10 ")

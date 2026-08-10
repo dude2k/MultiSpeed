@@ -40,6 +40,7 @@ Messages are safe for display but deliberately omit internal paths, command outp
 - `/providers`: capabilities, availability, server discovery, and server validation
 - `/settings`: singleton operational/display settings
 - `/settings/ookla-eula`: explicit, separately persisted Ookla acceptance or revocation; acceptance requires `confirmed=true`
+- `/providers/ookla/binary`: deployment-opted-in status and bounded raw upload of one operator-supplied Linux amd64 executable; EULA acceptance is required before upload
 - `/retention/cleanup`: bounded manual result cleanup using policy or a past cutoff
 - `/exports/results.csv`, `/exports/results.json`: filtered result exports
 - `/config/export`, `/config/import`: versioned portable configuration download and atomic restore

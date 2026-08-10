@@ -178,6 +178,18 @@ export interface Provider {
   capabilities: ProviderCapabilities
 }
 
+export interface OoklaBinaryStatus {
+  uploadEnabled: boolean
+  installed: boolean
+  maxUploadBytes: number
+  message: string
+}
+
+export interface OoklaBinaryInstallResult extends OoklaBinaryStatus {
+  version: string
+  sha256: string
+}
+
 export interface ProviderServer {
   id: string
   name: string

@@ -20,6 +20,7 @@ function mockEditorApi() {
   vi.spyOn(api, 'providers').mockResolvedValue(providers)
   vi.spyOn(api, 'settings').mockResolvedValue(fallbackSettings)
   vi.spyOn(api, 'providerServers').mockResolvedValue([{ id: '42', name: 'Frankfurt', sponsor: 'Example ISP', host: 'speed.example.test', location: 'Frankfurt', country: 'DE' }])
+  vi.spyOn(api, 'ooklaBinaryStatus').mockResolvedValue({ uploadEnabled: true, installed: false, maxUploadBytes: 64 * 1024 * 1024, message: 'Upload an executable.' })
 }
 
 describe('task editor', () => {
@@ -148,6 +149,35 @@ describe('task editor', () => {
     await user.click(screen.getByRole('button', { name: /create task/i }))
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ enabled: true, provider: 'ookla' })))
     expect(validate).not.toHaveBeenCalled()
+  })
+
+  it('uploads a separately obtained Ookla executable from the unavailable-provider notice', async () => {
+    mockEditorApi()
+    vi.mocked(api.settings).mockResolvedValue({
+      ...fallbackSettings,
+      ooklaEulaAccepted: true,
+      ooklaEulaAcceptedAt: '2026-08-10T00:00:00Z',
+      ooklaEulaVersion: 'speedtest-eula-reviewed-2026-08-07',
+      ooklaEulaCurrentVersion: 'speedtest-eula-reviewed-2026-08-07',
+      ooklaEulaEffectiveAccepted: true,
+      ooklaEulaAcceptanceSource: 'persisted',
+    })
+    const upload = vi.spyOn(api, 'uploadOoklaBinary').mockResolvedValue({
+      uploadEnabled: true, installed: true, maxUploadBytes: 64 * 1024 * 1024, message: 'Installed.',
+      version: 'Speedtest by Ookla 1.2.0.84', sha256: 'a'.repeat(64),
+    })
+    const user = userEvent.setup()
+    renderPage(<TaskEditorPage />, { route: '/tasks/new' })
+    await screen.findByText('Identity & measurement provider')
+    await user.click(screen.getByRole('button', { name: /Ookla Speedtest/i }))
+    expect(await screen.findByRole('link', { name: /Get official Speedtest CLI/i })).toHaveAttribute('href', 'https://www.speedtest.net/apps/cli')
+    expect(screen.getByText(/choose the Linux x86_64 archive/i)).toBeVisible()
+    const executable = new File([new Uint8Array([0x7f, 0x45, 0x4c, 0x46])], 'speedtest', { type: 'application/octet-stream' })
+    await user.upload(await screen.findByLabelText('Ookla Speedtest executable'), executable)
+    await user.click(screen.getByRole('switch', { name: /This is an authorized Speedtest by Ookla executable/i }))
+    await user.click(screen.getByRole('button', { name: /Install executable/i }))
+    await waitFor(() => expect(upload).toHaveBeenCalledWith(executable))
+    expect(await screen.findByText(/Speedtest by Ookla 1.2.0.84 is ready/i)).toBeVisible()
   })
 
   it('discovers LibreSpeed servers and reveals intentional virtual WAN paths', async () => {

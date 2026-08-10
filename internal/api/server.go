@@ -24,6 +24,7 @@ import (
 	"github.com/dude2k/MultiSpeed/internal/models"
 	"github.com/dude2k/MultiSpeed/internal/network"
 	"github.com/dude2k/MultiSpeed/internal/providers"
+	ooklaprovider "github.com/dude2k/MultiSpeed/internal/providers/ookla"
 	"github.com/dude2k/MultiSpeed/internal/retention"
 	"github.com/dude2k/MultiSpeed/internal/scheduler"
 	"github.com/dude2k/MultiSpeed/internal/statistics"
@@ -53,6 +54,8 @@ type Server struct {
 	ready                        func(context.Context) error
 	manualLimit                  *rateGate
 	discoveryLimit               *rateGate
+	ooklaUploadLimit             *rateGate
+	ooklaBinary                  *ooklaprovider.BinaryManager
 	ooklaEULAEnvironmentAccepted bool
 	configurationMu              sync.Mutex
 }
@@ -67,7 +70,8 @@ func New(store *database.Store, schedule *scheduler.Scheduler, executionManager 
 		build: build, hosts: newHostPolicy(httpPolicy, interfaces), statsService: statistics.New(store), retentionCleaner: cleaner, startedAt: time.Now().UTC(), ready: func(ctx context.Context) error {
 			_, err := store.SchemaVersion(ctx)
 			return err
-		}, manualLimit: newRateGate(4, time.Minute), discoveryLimit: newRateGate(12, time.Minute),
+		}, manualLimit: newRateGate(4, time.Minute), discoveryLimit: newRateGate(12, time.Minute), ooklaUploadLimit: newRateGate(2, time.Hour),
+		ooklaBinary:                  ooklaprovider.NewBinaryManager(httpPolicy.DataDirectory, httpPolicy.OoklaBinaryPath, httpPolicy.AllowOoklaBinaryUpload, nil),
 		ooklaEULAEnvironmentAccepted: httpPolicy.OoklaEULAEnvironmentAccepted}
 }
 
@@ -102,6 +106,8 @@ func (s *Server) Handler() http.Handler {
 		api.Delete("/route-profiles/{id}", s.deleteRouteProfile)
 		api.Post("/route-profiles/{id}/validate", s.validateRouteProfile)
 		api.Get("/providers", s.listProviders)
+		api.Get("/providers/ookla/binary", s.getOoklaBinaryStatus)
+		api.Post("/providers/ookla/binary", s.uploadOoklaBinary)
 		api.Get("/providers/{provider}/servers", s.listProviderServers)
 		api.Post("/providers/{provider}/validate-server", s.validateProviderServer)
 		api.Get("/settings", s.getSettings)

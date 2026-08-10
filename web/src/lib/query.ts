@@ -24,6 +24,7 @@ export const queryKeys = {
   interfaces: ['interfaces'] as const,
   routes: ['route-profiles'] as const,
   providers: ['providers'] as const,
+  ooklaBinary: ['providers', 'ookla', 'binary'] as const,
   settings: ['settings'] as const,
   system: ['system'] as const,
 }
