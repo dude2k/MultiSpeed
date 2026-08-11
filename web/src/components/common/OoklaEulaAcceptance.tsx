@@ -13,6 +13,8 @@ import { Spinner } from '../ui/states'
 import { useToast } from '../ui/toast'
 
 const ooklaEulaUrl = 'https://www.speedtest.net/about/eula'
+const ooklaTermsUrl = 'https://www.speedtest.net/about/terms'
+const ooklaPrivacyUrl = 'https://www.speedtest.net/about/privacy'
 const ooklaCliDownloadUrl = 'https://www.speedtest.net/apps/cli'
 
 export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) {
@@ -31,7 +33,7 @@ export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) 
       setConfirmRevoke(false)
       toast({
         tone: 'success',
-        title: request.accepted ? 'Ookla EULA acceptance recorded' : 'Ookla EULA acceptance revoked',
+        title: request.accepted ? 'Ookla terms acknowledgement recorded' : 'Ookla terms acknowledgement revoked',
         description: request.accepted
           ? 'Provider checks now continue to the separately installed Ookla CLI.'
           : updated.ooklaEulaEffectiveAccepted
@@ -39,7 +41,7 @@ export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) 
             : 'New Ookla discovery and test runs are blocked.',
       })
     },
-    onError: (error) => toast({ tone: 'error', title: 'Unable to update Ookla acceptance', description: getApiErrorMessage(error) }),
+    onError: (error) => toast({ tone: 'error', title: 'Unable to update Ookla acknowledgement', description: getApiErrorMessage(error) }),
   })
 
   if (settings.ooklaEulaEffectiveAccepted) {
@@ -47,7 +49,7 @@ export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) 
     return (
       <div className={compact ? 'mt-3 space-y-3' : 'space-y-4'}>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="success" className="gap-1"><ShieldCheck className="h-3 w-3" />{environmentOverride ? 'Accepted by environment' : 'Acceptance recorded'}</Badge>
+          <Badge tone="success" className="gap-1"><ShieldCheck className="h-3 w-3" />{environmentOverride ? 'Enabled by environment' : 'Acknowledgement recorded'}</Badge>
           <span className="text-xs text-muted-foreground">
             {environmentOverride
               ? 'ACCEPT_OOKLA_EULA=true'
@@ -56,16 +58,18 @@ export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) 
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
           {environmentOverride
-            ? 'The environment override opens MultiSpeed\'s technical gate. Clear ACCEPT_OOKLA_EULA and restart MultiSpeed to block Ookla runs.'
-            : 'This only opens MultiSpeed\'s technical gate. It does not grant a license, install the proprietary CLI, or replace any permission required by Ookla.'}
+            ? 'The environment override authorizes MultiSpeed to pass --accept-license and --accept-gdpr non-interactively and opens only its technical gate. It does not grant a license. Use only when the deployment fits the current documents or you have separate written Ookla authorization; clear ACCEPT_OOKLA_EULA and restart to block runs.'
+            : 'This record authorizes MultiSpeed to pass --accept-license and --accept-gdpr non-interactively and opens only its technical gate. It does not grant a license, install the proprietary CLI, or replace separate written authorization when the deployment falls outside Ookla\'s express grant.'}
         </p>
-        <p className="text-xs text-muted-foreground">Terms revision: <code>{settings.ooklaEulaCurrentVersion}</code></p>
+        <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">Ookla's public EULA describes personal, non-commercial CLI use on one personal computer, excludes routers, modems, and other non-PC devices, and restricts making the CLI available on a network where more than one device can access it. The binding current documents or individual written authorization govern your deployment.</p>
+        <p className="text-xs text-muted-foreground">MultiSpeed review marker (not an Ookla version identifier): <code>{settings.ooklaEulaCurrentVersion}</code></p>
         <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline"><a href={ooklaEulaUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />Review current EULA</a></Button>
-          {environmentOverride ? null : <Button size="sm" variant="ghost" onClick={() => setConfirmRevoke(true)} disabled={mutation.isPending}><ShieldOff className="h-3.5 w-3.5" />Revoke acceptance</Button>}
+          <OoklaTermsLinks />
+          {environmentOverride ? null : <Button size="sm" variant="ghost" onClick={() => setConfirmRevoke(true)} disabled={mutation.isPending}><ShieldOff className="h-3.5 w-3.5" />Revoke acknowledgement</Button>}
         </div>
         <OoklaBinaryUpload />
-        {environmentOverride ? null : <ConfirmDialog open={confirmRevoke} onOpenChange={setConfirmRevoke} title="Revoke Ookla EULA acceptance?" description="New Ookla provider discovery and test runs will be blocked. Existing result history is preserved." confirmLabel="Revoke acceptance" destructive busy={mutation.isPending} onConfirm={() => mutation.mutate({ accepted: false, explicitConfirmation: false })} />}
+        <OoklaTrademarkNotice />
+        {environmentOverride ? null : <ConfirmDialog open={confirmRevoke} onOpenChange={setConfirmRevoke} title="Revoke Ookla terms acknowledgement?" description="New Ookla provider discovery and test runs will be blocked. Existing result history is preserved." confirmLabel="Revoke acknowledgement" destructive busy={mutation.isPending} onConfirm={() => mutation.mutate({ accepted: false, explicitConfirmation: false })} />}
       </div>
     )
   }
@@ -73,15 +77,28 @@ export function OoklaEulaAcceptance({ compact = false }: { compact?: boolean }) 
   return (
     <div className={compact ? 'mt-3 space-y-3' : 'space-y-4'}>
       {settings.ooklaEulaVersion && settings.ooklaEulaVersion !== settings.ooklaEulaCurrentVersion
-        ? <p className="text-xs leading-5 text-amber-500">The previous acknowledgement covered <code>{settings.ooklaEulaVersion}</code>. Review and accept the currently required revision again.</p>
+        ? <p className="text-xs leading-5 text-amber-500">The previous acknowledgement covered <code>{settings.ooklaEulaVersion}</code>. Review and agree to the currently required documents again.</p>
         : null}
-      <p className="text-xs leading-5 text-muted-foreground">Review Ookla's current terms and obtain any permission required for this installation. MultiSpeed never downloads or bundles the proprietary CLI.</p>
-      <p className="text-xs text-muted-foreground">Required terms revision: <code>{settings.ooklaEulaCurrentVersion}</code></p>
-      <Button asChild size="sm" variant="outline"><a href={ooklaEulaUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />Review current Ookla EULA</a></Button>
-      <CheckField checked={confirmed} onChange={setConfirmed} label="I reviewed and accept the current Ookla EULA" description="I confirm that I am authorized to record this decision for this MultiSpeed installation." />
-      <Button size="sm" onClick={() => mutation.mutate({ accepted: true, explicitConfirmation: true })} disabled={!confirmed || mutation.isPending}>{mutation.isPending ? <Spinner /> : <ShieldCheck className="h-3.5 w-3.5" />}Record acceptance</Button>
+      <p className="text-xs leading-5 text-muted-foreground">Review all current Ookla documents. Its public EULA describes personal, non-commercial CLI use on one personal computer, excludes routers, modems, and other non-PC devices, and restricts making the CLI available on a network where more than one device can access it. Use only when this deployment fits the binding current documents or you have separate written Ookla authorization. MultiSpeed never downloads or bundles the proprietary CLI.</p>
+      <p className="text-xs text-muted-foreground">Required MultiSpeed review marker (not an Ookla version identifier): <code>{settings.ooklaEulaCurrentVersion}</code></p>
+      <div className="flex flex-wrap gap-2"><OoklaTermsLinks /></div>
+      <CheckField checked={confirmed} onChange={setConfirmed} label="I agree to the current EULA and Terms of Use and reviewed the Privacy Policy" description="I authorize MultiSpeed to pass --accept-license and --accept-gdpr non-interactively, and confirm this personal-computer/non-commercial deployment, device type, and any network access from multiple devices fit the current documents or I have separate written authorization." />
+      <Button size="sm" onClick={() => mutation.mutate({ accepted: true, explicitConfirmation: true })} disabled={!confirmed || mutation.isPending}>{mutation.isPending ? <Spinner /> : <ShieldCheck className="h-3.5 w-3.5" />}Record acknowledgement</Button>
+      <OoklaTrademarkNotice />
     </div>
   )
+}
+
+function OoklaTrademarkNotice() {
+  return <p className="text-[11px] leading-5 text-muted-foreground">Ookla® and Speedtest® are registered trademarks of Ookla, LLC. MultiSpeed is independent and is not affiliated with, endorsed by, or sponsored by Ookla.</p>
+}
+
+function OoklaTermsLinks() {
+  return <>
+    <Button asChild size="sm" variant="outline"><a href={ooklaEulaUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />EULA</a></Button>
+    <Button asChild size="sm" variant="outline"><a href={ooklaTermsUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />Terms of Use</a></Button>
+    <Button asChild size="sm" variant="outline"><a href={ooklaPrivacyUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />Privacy Policy</a></Button>
+  </>
 }
 
 function OoklaBinaryUpload() {
@@ -128,7 +145,7 @@ function OoklaBinaryUpload() {
         </div>
         <p className="text-[11px] leading-5 text-muted-foreground">On Ookla's download page, choose the Linux x86_64 archive, extract it, and select the contained <code>speedtest</code> executable here.</p>
         {tooLarge ? <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">The selected file exceeds the {Math.round(status.maxUploadBytes / (1024 * 1024))} MiB upload limit.</p> : null}
-        <CheckField checked={confirmed} onChange={setConfirmed} disabled={!file || tooLarge || upload.isPending} label="This is an authorized Speedtest by Ookla executable" description="I obtained this Linux amd64 file separately, reviewed Ookla's terms, and understand that MultiSpeed will execute it inside the container." />
+        <CheckField checked={confirmed} onChange={setConfirmed} disabled={!file || tooLarge || upload.isPending} label="This is an authorized Speedtest by Ookla executable" description="I obtained this Linux amd64 file separately, agreed to the current EULA/Terms, reviewed the Privacy Policy, and confirm this device and any network access from multiple devices fit those documents or have separate written Ookla authorization." />
         <Button type="button" size="sm" onClick={() => file && upload.mutate(file)} disabled={!file || !confirmed || tooLarge || upload.isPending}>{upload.isPending ? <Spinner /> : <Upload className="h-3.5 w-3.5" />}Install executable</Button>
         <p className="text-[11px] leading-5 text-muted-foreground">Because MultiSpeed has no authentication, keep this opt-in upload endpoint limited to a trusted private network.</p>
       </> : null}

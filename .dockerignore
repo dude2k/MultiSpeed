@@ -6,7 +6,9 @@
 .vscode
 data
 docs
-scripts
+scripts/*
+!scripts/generate-frontend-license-bundle.mjs
+!scripts/generate-go-license-bundle.go
 *.db
 *.db-shm
 *.db-wal

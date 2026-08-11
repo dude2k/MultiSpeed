@@ -17,6 +17,8 @@ Compose applies:
 
 Host networking means Docker port publishing is neither required nor used. Protect TCP 8787 with host firewall rules. MultiSpeed has no authentication.
 
+The published image declares runtime UID/GID `10001:10001`. The supplied Compose file overrides that identity with `MULTISPEED_UID:MULTISPEED_GID` so a normal host user can own `./data`. Direct image deployments that do not override `--user`, including a default Unraid container, must make the `/data` bind source writable by `10001:10001`. MultiSpeed does not interpret `PUID` or `PGID` environment variables.
+
 ## Prepare the host
 
 ```bash
@@ -32,13 +34,41 @@ id -u
 id -g
 ```
 
-Set those values as `MULTISPEED_UID` and `MULTISPEED_GID` in `.env`. Ensure `./data` is owned and writable by that identity. Do not use UID 0.
+Set those values as `MULTISPEED_UID` and `MULTISPEED_GID` in `.env`. Ensure `./data` is owned and writable by that identity. Do not use UID 0 or make the directory world-writable. The supplied Compose deployment deliberately fixes `APP_DATA_DIR=/data`; changing an `APP_DATA_DIR` value in `.env` would not relocate the mount.
 
-Review `APP_LISTEN_ADDR`. Compose defaults to `0.0.0.0:8787` for a trusted LAN and accepts every syntactically valid host on port 8787 without an allowlist; use `127.0.0.1:8787` when only a local reverse proxy should connect. With a specific bind address, add additional DNS names through `APP_TRUSTED_HOSTS`; assigned host IPs and loopback are accepted automatically.
+```bash
+mkdir -p data
+chown -R "$(id -u):$(id -g)" data
+chmod -R u+rwX,go-rwx data
+```
+
+Review `APP_LISTEN_ADDR`. Compose defaults to `0.0.0.0:8787` for a trusted LAN and accepts concrete unicast IP literals on port 8787 without an allowlist; use `127.0.0.1:8787` when only a local reverse proxy should connect. Wildcard listeners reject arbitrary DNS names against DNS rebinding, so add each intentionally used LAN or reverse-proxy DNS name through `APP_TRUSTED_HOSTS`. Assigned IPs and loopback are accepted automatically.
 
 Custom LibreSpeed backends require a separate deployment-owned allowlist. Put their exact base URLs in comma-separated `APP_ALLOWED_CUSTOM_SERVER_URLS`; leave it empty to disable custom URLs. Entries may use HTTPS or HTTP and may include a safe base path and explicit port, but not credentials, queries, fragments, IPv6 zones, encoded/traversal-like paths, or ambiguous host syntax. Plain HTTP still requires the task's explicit `allowInsecure` setting. Changing this environment variable requires recreating the service.
 
-Managed Ookla executable upload is separately fail-closed. Leave `APP_ALLOW_OOKLA_BINARY_UPLOAD=false` unless operators must install a separately obtained single-file Linux amd64 CLI through the UI. Enabling it permits a same-origin trusted client to supply code that MultiSpeed executes for version validation and later speed tests; use it only on a private trusted network or behind an authenticating reverse proxy. The managed path must remain beneath `APP_DATA_DIR` (the Compose default is `/data/providers/ookla/speedtest`).
+Managed Ookla executable upload is separately fail-closed. Leave `APP_ALLOW_OOKLA_BINARY_UPLOAD=false` unless operators must install a separately obtained single-file Linux amd64 CLI through the UI. Enabling it permits a client that can reach the listener to supply code that MultiSpeed executes for version validation and later speed tests; use it only on a private trusted network or behind an authenticating reverse proxy. Upload is enabled only when `OOKLA_BINARY` is exactly `APP_DATA_DIR/providers/ookla/speedtest` (the default is `/data/providers/ookla/speedtest`), and neither the data directory nor its provider subdirectories may be symbolic links.
+
+Choose one Ookla installation model. For managed upload, mount `/data` read/write, keep `OOKLA_BINARY=/data/providers/ookla/speedtest`, and do not create a separate mount or directory at the final `speedtest` file path. For an operator-managed read-only executable, leave upload disabled, mount the file at a path outside `/data`, and point `OOKLA_BINARY` at that file. Do not combine the two models. In either mode, the CLI receives writable, source-path-isolated runtime homes beneath `/data/providers/ookla/runtime`, so `/data/providers/ookla` must remain writable by the runtime user.
+
+## Unraid and other direct-image deployments
+
+Create the container from a pinned full semantic-version image such as `ghcr.io/dude2k/multispeed:<version>`, then configure:
+
+1. **Network Type: Host.** Do not publish a container port. Bridge mode exposes Docker's virtual interface and NAT route instead of the host WAN paths.
+2. A persistent read/write path from the chosen app-data directory to container path `/data`.
+3. `APP_LISTEN_ADDR=0.0.0.0:8787` for a trusted LAN, `APP_DATA_DIR=/data`, and the desired timezone/log level.
+4. No `PUID` or `PGID` variables. Keep the image's `10001:10001` user unless an explicit Unraid extra parameter overrides the container user.
+5. `APP_ALLOW_OOKLA_BINARY_UPLOAD=true` only when managed upload is required. Prefer recording the terms acknowledgement and CLI flag authorization in Settings instead of setting the legacy-named environment override.
+
+Before the first start, prepare the exact host directory selected in the Unraid path mapping:
+
+```bash
+mkdir -p /path/to/multispeed-data
+chown -R 10001:10001 /path/to/multispeed-data
+chmod -R u+rwX,go-rwx /path/to/multispeed-data
+```
+
+Never substitute `chmod 777`. Start the container, open **System Information**, and verify that the expected host interfaces and source addresses are present. If only a Docker `eth0` with a container-private address appears, stop and change the network type to Host before creating or enabling tasks.
 
 ## Start or upgrade
 
@@ -49,9 +79,21 @@ docker compose ps
 docker compose logs --follow multispeed
 ```
 
-Pin `MULTISPEED_IMAGE` to a full semantic version in production instead of `latest`. Before upgrading, download an online backup, read [CHANGELOG.md](../CHANGELOG.md), pull the new image, and recreate the single service. Migrations run automatically before readiness.
+Pin `MULTISPEED_IMAGE` to a full semantic version in production instead of `latest`. Before upgrading, read [CHANGELOG.md](../CHANGELOG.md) and create the backups appropriate to the state being protected. An online backup contains SQLite state but not a managed Ookla executable or CLI runtime homes; a stopped copy of the complete `/data` directory contains them. Back up deployment environment variables separately. Pull the new image and recreate the single service with the same host-to-`/data` mapping and numeric user. Migrations run automatically before readiness.
 
 Rollback can be unsafe after a schema migration. Preserve the pre-upgrade backup and consult release notes; restore only with the container stopped.
+
+## First-start acknowledgement
+
+Before enabling schedules:
+
+1. Verify health and readiness.
+2. Open **System Information** and confirm that the expected host interfaces and source addresses are visible; a Docker-private `eth0` means host networking is not active.
+3. Review Settings and the trusted-network warning.
+4. Create and validate route profiles for enforced gateway/table paths.
+5. Confirm provider availability. For Ookla, record agreement to the current documents and authorization for both non-interactive acceptance flags, confirm any separate deployment permission, and install the separately obtained executable as distinct operations.
+6. Create a task, run its preflight, perform one manual test, and verify the recorded source path/public IP before relying on the schedule.
+7. Create a test backup and record the container image tag and numeric runtime identity.
 
 ## Health and readiness
 
@@ -91,6 +133,8 @@ docker compose logs --since 1h multispeed
 ```
 
 Never publish debug logs without reviewing provider diagnostics, interface addresses, public IPs, target metadata, and route snapshots.
+
+See [Privacy and data flow](privacy.md) for the local data inventory, outbound provider traffic, and disclosure considerations for logs, exports, and backups.
 
 ## Smoke test
 

@@ -8,7 +8,7 @@ const (
 )
 
 // ConfigurationDocument is the portable, versioned subset of MultiSpeed's
-// persisted state. Measurement history and licensing acknowledgements are
+// persisted state. Measurement history and provider terms acknowledgements are
 // deliberately excluded.
 type ConfigurationDocument struct {
 	Format             string                      `json:"format"`

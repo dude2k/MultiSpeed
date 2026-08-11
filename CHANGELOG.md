@@ -4,6 +4,30 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-11
+
+### Fixed
+
+- Give Ookla CLI provider-availability checks, discovery, and tests writable runtime homes beneath `/data/providers/ookla/runtime`, isolated by selected interface/source path, instead of allowing the non-root CLI to attempt writes below `/nonexistent/.config`.
+- Serialize Ookla CLI state access per WAN path, reject symlinked state directories, and constrain managed binary replacement to the documented `/data/providers/ookla/speedtest` target.
+
+### Security
+
+- Require explicit trusted-host entries for DNS hostnames even on wildcard listeners while continuing to accept concrete unicast IP addresses used by private-network deployments.
+- Publish complete production dependency license and notice bundles plus the exact patched LibreSpeed corresponding source, build inputs, license texts, hashes, SBOM, and attestations with each release.
+
+### Changed
+
+- Require renewed Ookla terms acknowledgement under the new MultiSpeed internal review marker. The marker is not an Ookla document version and does not detect vendor-document changes automatically.
+- Document that the technical gate authorizes MultiSpeed to pass `--accept-license` and `--accept-gdpr`; it is not a license grant, and deployments outside the express personal-computer/non-commercial scope require separate written authorization.
+- Use a neutral MultiSpeed identifier for Cloudflare edge requests and add persistent provider trademark attribution and non-affiliation notices.
+
+### Documentation
+
+- Document the supported Unraid/direct-GHCR deployment, including host networking, the image's default `10001:10001` runtime identity, writable `/data` ownership, first-run interface verification, and upgrade persistence.
+- Clarify that managed Ookla upload remains disabled until `APP_ALLOW_OOKLA_BINARY_UPLOAD=true` is set, requires a recorded terms acknowledgement and writable managed file path, and is limited to two attempts per client per hour.
+- Add managed-upload troubleshooting, explicit backup coverage for the separate Ookla executable, privacy/data-flow guidance, and the exact current rate-limit contract.
+
 ## [1.0.3] - 2026-08-10
 
 ### Added
@@ -59,7 +83,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/dude2k/MultiSpeed/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/dude2k/MultiSpeed/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/dude2k/MultiSpeed/compare/v1.0.0...v1.0.1

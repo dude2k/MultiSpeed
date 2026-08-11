@@ -19,9 +19,15 @@ case " $* " in
     printf '%s\n' 'Speedtest by Ookla 1.2.0 deterministic-e2e'
     ;;
   *" --servers "*)
+	[ "${HOME:-}" != /nonexistent ]
+	mkdir -p "${HOME}/.config/ookla"
+	printf '%s' accepted > "${HOME}/.config/ookla/speedtest-cli.json"
     printf '%s\n' '{"servers":[{"id":101,"host":"ookla.fixture.invalid:8080","name":"Frankfurt Fixture","sponsor":"MultiSpeed E2E","location":"Frankfurt","country":"Germany","distance":12.5}]}'
     ;;
   *)
+	[ "${HOME:-}" != /nonexistent ]
+	mkdir -p "${HOME}/.config/ookla"
+	printf '%s' accepted > "${HOME}/.config/ookla/speedtest-cli.json"
     printf '%s\n' '{"type":"result","timestamp":"2026-08-05T08:00:00Z","ping":{"jitter":2.1,"latency":14.2},"download":{"bandwidth":77500000,"bytes":77500000},"upload":{"bandwidth":14750000,"bytes":14750000},"packetLoss":0,"interface":{"externalIp":"203.0.113.10"},"server":{"id":101,"host":"ookla.fixture.invalid:8080","name":"Frankfurt Fixture","location":"Frankfurt","country":"Germany","sponsor":"MultiSpeed E2E"},"result":{"url":"https://example.invalid/result/ookla-e2e"}}'
     ;;
 esac

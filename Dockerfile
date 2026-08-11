@@ -12,7 +12,14 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --no-audit --no-fund
 
 COPY web/ ./
-RUN npm run build
+COPY scripts/generate-frontend-license-bundle.mjs /tools/generate-frontend-license-bundle.mjs
+COPY third_party/license-overrides/npm/ /license-overrides/npm/
+RUN npm run build && \
+    node /tools/generate-frontend-license-bundle.mjs \
+      package-lock.json \
+      node_modules \
+      /out/dependency-licenses \
+      /license-overrides/npm
 
 FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:8d36439c36258ba98de1bf2b316eda72905f9d743117119f6db9705c49245644 AS librespeed-build
 ARG LIBRESPEED_VERSION=v1.0.13
@@ -28,6 +35,7 @@ WORKDIR /build
 # MultiSpeed source-bound DNS overlay. The upstream archive, complete overlay,
 # integration test, license, and module metadata ship in the runtime image.
 COPY third_party/librespeed/ /overlay/
+COPY scripts/generate-go-license-bundle.go /tools/generate-go-license-bundle.go
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     set -eux; \
@@ -43,20 +51,32 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     sed -i '/defaultDialer.LocalAddr = localTCPAddr/a\	defaultDialer.Resolver = newSourceBoundResolver(addr.IP)\n\tif err := restrictDialerToAllowedServerEndpoints(defaultDialer); err != nil { return nil, err }' speedtest/speedtest.go; \
     install -m 0644 /overlay/source_bound_resolver.go speedtest/source_bound_resolver.go; \
     install -m 0644 /overlay/source_bound_resolver_test.go speedtest/source_bound_resolver_test.go; \
-    go test -count=1 -run '^(TestSourceBoundResolverUsesSelectedSourceForUDPAndTCPFallback|TestCustomServerDestinationGuard.*)$' ./speedtest; \
-    rm speedtest/source_bound_resolver_test.go; \
-    go build -trimpath -buildvcs=false \
+    install -m 0755 /overlay/build-corresponding-source.sh build-corresponding-source.sh; \
+    install -m 0644 /usr/share/common-licenses/GPL-3 COPYING; \
+    install -m 0644 LICENSE COPYING.LESSER; \
+    go mod vendor; \
+    go test -mod=vendor -count=1 -run '^(TestSourceBoundResolverUsesSelectedSourceForUDPAndTCPFallback|TestCustomServerDestinationGuard.*)$' ./speedtest; \
+    go build -mod=vendor -trimpath -buildvcs=false \
       -ldflags "-s -w -X github.com/librespeed/speedtest-cli/defs.ProgName=librespeed-cli -X github.com/librespeed/speedtest-cli/defs.ProgVersion=${LIBRESPEED_VERSION}+${LIBRESPEED_PATCH_VERSION} -X github.com/librespeed/speedtest-cli/defs.BuildDate=${BUILD_DATE}" \
       -o /out/librespeed-cli \
       ./main.go; \
     test -x /out/librespeed-cli; \
-    install -D -m 0644 LICENSE /out/notices/LICENSE; \
+    GOFLAGS=-mod=mod go run /tools/generate-go-license-bundle.go /out/dependency-licenses ./main.go; \
+    install -D -m 0644 COPYING /out/notices/COPYING; \
+    install -m 0644 COPYING.LESSER /out/notices/COPYING.LESSER; \
     install -D -m 0644 go.mod /out/notices/go.mod; \
     if [ -f go.sum ]; then install -m 0644 go.sum /out/notices/go.sum; fi; \
     install -D -m 0644 /overlay/README.md /out/notices/multispeed-source-bound-dns/README.md; \
     install -m 0644 /overlay/source_bound_resolver.go /out/notices/multispeed-source-bound-dns/source_bound_resolver.go; \
     install -m 0644 /overlay/source_bound_resolver_test.go /out/notices/multispeed-source-bound-dns/source_bound_resolver_test.go; \
-    install -D -m 0644 "/go/pkg/mod/cache/download/github.com/librespeed/speedtest-cli/@v/${LIBRESPEED_VERSION}.zip" "/out/notices/librespeed-speedtest-cli-${LIBRESPEED_VERSION}-source.zip"
+    mkdir -p /out/source; \
+    tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+      -C /build/librespeed \
+      -cf "/out/source/librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar" \
+      .; \
+    gzip -n "/out/source/librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar"; \
+    cd /out/source; \
+    sha256sum "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz" > "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz.sha256"
 
 FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:8d36439c36258ba98de1bf2b316eda72905f9d743117119f6db9705c49245644 AS backend-build
 ARG VERSION=dev
@@ -80,6 +100,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     set -eux; \
     test "${TARGETOS}" = linux; \
     test "${TARGETARCH}" = amd64; \
+    go run ./scripts/generate-go-license-bundle.go /out/dependency-licenses ./cmd/multispeed; \
     GOOS=linux GOARCH=amd64 go build \
       -trimpath \
       -buildvcs=false \
@@ -98,7 +119,7 @@ ARG LIBRESPEED_X_NET_VERSION=v0.55.0
 LABEL org.opencontainers.image.title="MultiSpeed" \
       org.opencontainers.image.description="Production-ready multi-WAN speed-test monitor" \
       org.opencontainers.image.source="https://github.com/dude2k/MultiSpeed" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.licenses="MIT AND LGPL-3.0-only AND LGPL-3.0-or-later" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
@@ -115,15 +136,34 @@ RUN set -eux; \
     useradd --system --uid 10001 --gid multispeed --home-dir /nonexistent --shell /usr/sbin/nologin multispeed; \
     install -d -o multispeed -g multispeed -m 0750 /data; \
     install -d -o root -g root -m 0755 /opt/multispeed/providers; \
-    install -d -o root -g root -m 0755 /usr/share/doc/librespeed-cli
+    install -d -o root -g root -m 0755 /usr/share/doc/librespeed-cli; \
+    install -d -o root -g root -m 0755 /usr/share/doc/multispeed/third-party; \
+    install -d -o root -g root -m 0755 /opt/multispeed/release-artifacts
 
 COPY --from=backend-build --chown=root:root /out/multispeed /usr/local/bin/multispeed
 COPY --from=librespeed-build --chown=root:root /out/librespeed-cli /usr/local/bin/librespeed-cli
 COPY --from=librespeed-build --chown=root:root /out/notices/ /usr/share/doc/librespeed-cli/
+COPY --from=librespeed-build --chown=root:root /out/dependency-licenses/ /usr/share/doc/librespeed-cli/dependency-licenses/
+COPY --from=librespeed-build --chown=root:root /out/source/ /opt/multispeed/release-artifacts/
+COPY --from=frontend-build --chown=root:root /out/dependency-licenses/ /usr/share/doc/multispeed/third-party/npm/
+COPY --from=backend-build --chown=root:root /out/dependency-licenses/ /usr/share/doc/multispeed/third-party/go/
 COPY --chown=root:root LICENSE THIRD_PARTY_NOTICES.md /usr/share/doc/multispeed/
 
-RUN chmod 0755 /usr/local/bin/multispeed /usr/local/bin/librespeed-cli && \
-    chmod -R a-w /usr/local/bin /usr/share/doc/multispeed /usr/share/doc/librespeed-cli
+RUN set -eux; \
+    tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+      -C /usr/share/doc \
+      -cf /opt/multispeed/release-artifacts/multispeed-third-party-licenses.tar \
+      multispeed/LICENSE \
+      multispeed/THIRD_PARTY_NOTICES.md \
+      multispeed/third-party \
+      librespeed-cli/COPYING \
+      librespeed-cli/COPYING.LESSER \
+      librespeed-cli/dependency-licenses; \
+    gzip -n /opt/multispeed/release-artifacts/multispeed-third-party-licenses.tar; \
+    cd /opt/multispeed/release-artifacts; \
+    sha256sum multispeed-third-party-licenses.tar.gz > multispeed-third-party-licenses.tar.gz.sha256; \
+    chmod 0755 /usr/local/bin/multispeed /usr/local/bin/librespeed-cli; \
+    chmod -R a-w /usr/local/bin /usr/share/doc/multispeed /usr/share/doc/librespeed-cli /opt/multispeed/release-artifacts
 
 ENV APP_LISTEN_ADDR=127.0.0.1:8787 \
     APP_DATA_DIR=/data \

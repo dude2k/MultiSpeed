@@ -328,7 +328,7 @@ func TestEnabledOoklaTaskStillRequiresVerifiedEULAAcceptance(t *testing.T) {
 	provider := &providerStub{
 		id: models.ProviderOokla,
 		availability: func(context.Context) providers.Availability {
-			return providers.Availability{Available: false, Message: "Ookla EULA acceptance is required.", UnavailabilityReason: providers.UnavailabilityReasonPolicy}
+			return providers.Availability{Available: false, Message: "Ookla terms acknowledgement is required.", UnavailabilityReason: providers.UnavailabilityReasonPolicy}
 		},
 	}
 	validator := &recordingRouteValidator{result: models.RouteValidation{Success: true}}
@@ -339,7 +339,7 @@ func TestEnabledOoklaTaskStillRequiresVerifiedEULAAcceptance(t *testing.T) {
 	}
 
 	response := performTaskMutationRaw(t, handler, http.MethodPost, "/api/v1/tasks", body)
-	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "EULA acceptance is required") {
+	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "terms acknowledgement is required") {
 		t.Fatalf("unaccepted Ookla create status=%d body=%s", response.Code, response.Body.String())
 	}
 	tasks, err := store.ListTasks(context.Background())

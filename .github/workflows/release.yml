@@ -76,6 +76,7 @@ jobs:
           flavor: latest=true
           labels: |
             org.opencontainers.image.created=${{ steps.release.outputs.build_date }}
+            org.opencontainers.image.licenses=MIT AND LGPL-3.0-only AND LGPL-3.0-or-later
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -122,6 +123,40 @@ jobs:
           image-ref: multispeed:${{ steps.release.outputs.version }}
           format: spdx-json
           output: multispeed-${{ steps.release.outputs.version }}.spdx.json
+
+      - name: Extract and validate legal release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-legal
+          container_id="$(docker create multispeed:release-candidate)"
+          trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container_id}:/opt/multispeed/release-artifacts/." release-legal/
+          docker rm "${container_id}" >/dev/null
+          trap - EXIT
+          (
+            cd release-legal
+            sha256sum -c ./*.sha256
+          )
+          source_archive="$(find release-legal -maxdepth 1 -type f -name 'librespeed-cli-*-multispeed-corresponding-source.tar.gz' -print -quit)"
+          test -n "${source_archive}"
+          tar -tzf release-legal/multispeed-third-party-licenses.tar.gz > release-legal/license-contents.txt
+          tar -tzf "${source_archive}" > release-legal/source-contents.txt
+          grep -Fx 'multispeed/THIRD_PARTY_NOTICES.md' release-legal/license-contents.txt
+          grep -Fx 'librespeed-cli/COPYING' release-legal/license-contents.txt
+          grep -Fx 'librespeed-cli/COPYING.LESSER' release-legal/license-contents.txt
+          grep -E '^multispeed/third-party/npm/vite@[^/]+/' release-legal/license-contents.txt
+          grep -E '^multispeed/third-party/npm/tailwindcss@[^/]+/' release-legal/license-contents.txt
+          grep -E '^multispeed/third-party/npm/rolldown@[^/]+/THIRD-PARTY-LICENSE$' release-legal/license-contents.txt
+          grep -Fx './build-corresponding-source.sh' release-legal/source-contents.txt
+          grep -Fx './COPYING' release-legal/source-contents.txt
+          grep -Fx './COPYING.LESSER' release-legal/source-contents.txt
+          grep -Fx './vendor/modules.txt' release-legal/source-contents.txt
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}' multispeed:release-candidate)" = 'MIT AND LGPL-3.0-only AND LGPL-3.0-or-later'
+
+      - name: Validate frontend components in release SPDX SBOM
+        shell: bash
+        run: bash scripts/validate-spdx-frontend.sh multispeed-${{ steps.release.outputs.version }}.spdx.json release-legal/multispeed-third-party-licenses.tar.gz
 
       - name: Smoke-test release candidate before publication
         env:
@@ -170,11 +205,14 @@ jobs:
           sbom-path: multispeed-${{ steps.release.outputs.version }}.spdx.json
           push-to-registry: true
 
-      - name: Upload release SBOM
+      - name: Upload release compliance artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: multispeed-${{ steps.release.outputs.version }}-sbom
-          path: multispeed-${{ steps.release.outputs.version }}.spdx.json
+          name: multispeed-${{ steps.release.outputs.version }}-compliance
+          path: |
+            multispeed-${{ steps.release.outputs.version }}.spdx.json
+            release-legal/*.tar.gz
+            release-legal/*.sha256
           if-no-files-found: error
           retention-days: 90
 
@@ -183,8 +221,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          source_archive="$(find release-legal -maxdepth 1 -type f -name 'librespeed-cli-*-multispeed-corresponding-source.tar.gz' -print -quit)"
+          test -n "${source_archive}"
           gh release create "${GITHUB_REF_NAME}" \
             "multispeed-${{ steps.release.outputs.version }}.spdx.json#SPDX SBOM" \
+            "release-legal/multispeed-third-party-licenses.tar.gz#Third-party license and notice bundle" \
+            "release-legal/multispeed-third-party-licenses.tar.gz.sha256#License bundle SHA-256" \
+            "${source_archive}#LibreSpeed complete corresponding source" \
+            "${source_archive}.sha256#Corresponding-source SHA-256" \
             --verify-tag \
             --title "MultiSpeed ${{ steps.release.outputs.version }}" \
             --draft \

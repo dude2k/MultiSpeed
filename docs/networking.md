@@ -64,7 +64,7 @@ A route profile persists expectations, not networking changes:
 
 Validation checks the address assignment, performs a read-only route lookup, compares the returned output interface/source/gateway/table, checks reachability, and discovers public IP over the bound path. The validation snapshot and a precise mismatch explanation are stored with the result.
 
-DNS lookup is part of the selected network path: UDP queries and TCP fallback both bind to the configured source. This applies to native API validation, Cloudflare requests, and the bundled LibreSpeed CLI; MultiSpeed patches LibreSpeed v1.0.13 because upstream `--source` does not bind its resolver. A build-time local DNS fixture proves both transports originate from the selected address. If the container sees only a loopback resolver stub or a resolver in the opposite address family, MultiSpeed uses Cloudflare's family-matched public resolver (`1.1.1.1` or `2606:4700:4700::1111`) over that same bound source. It never retries DNS through an unbound resolver or another WAN.
+DNS lookup is part of the selected network path: UDP queries and TCP fallback both bind to the configured source. This applies to native API validation, requests to Cloudflare, and the bundled LibreSpeed CLI; MultiSpeed patches LibreSpeed v1.0.13 because upstream `--source` does not bind its resolver. A build-time local DNS fixture proves both transports originate from the selected address. If the container sees only a loopback resolver stub or a resolver in the opposite address family, MultiSpeed uses the family-matched public resolver operated by Cloudflare (`1.1.1.1` or `2606:4700:4700::1111`) over that same bound source. It never retries DNS through an unbound resolver or another WAN.
 
 ## Failure behavior
 

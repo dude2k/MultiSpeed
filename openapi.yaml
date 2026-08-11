@@ -2,7 +2,7 @@ openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: MultiSpeed API
-  version: 1.0.3
+  version: 1.0.4
   summary: Multi-WAN speed-test scheduling, execution, routing, and statistics API
   description: |
     Same-origin API for MultiSpeed. There is deliberately no authentication.
@@ -762,13 +762,16 @@ paths:
       tags: [Providers]
       summary: Atomically validate and install an operator-supplied Ookla executable
       description: |
-        Disabled unless APP_ALLOW_OOKLA_BINARY_UPLOAD=true and OOKLA_BINARY resolves
-        beneath APP_DATA_DIR. The current Ookla EULA must already be accepted. The
+        Disabled unless APP_ALLOW_OOKLA_BINARY_UPLOAD=true and OOKLA_BINARY is exactly
+        APP_DATA_DIR/providers/ookla/speedtest. The current Ookla terms acknowledgement and authorization
+        for MultiSpeed to pass --accept-license and --accept-gdpr must already be recorded. The
         body must be one Linux amd64 ELF executable obtained separately by the
         operator. MultiSpeed checks its bounded size, architecture, executable
         version output, and only then atomically activates it. This endpoint executes
         the uploaded file for verification and must only be enabled on a trusted
-        private network or behind an authenticating reverse proxy.
+        private network or behind an authenticating reverse proxy. Requests are
+        limited to two attempts per observed client address per hour; attempts are
+        counted before policy, terms-acknowledgement, file, and installation validation.
       requestBody:
         required: true
         content:
@@ -803,6 +806,15 @@ paths:
           $ref: "#/components/responses/UnsupportedContentType"
         "422":
           $ref: "#/components/responses/ValidationError"
+        "409":
+          description: The managed executable target is a directory, symbolic link, or otherwise conflicts with the required regular-file path.
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "429":
           $ref: "#/components/responses/RateLimited"
         "500":
@@ -815,6 +827,7 @@ paths:
       operationId: listProviderServers
       tags: [Providers]
       summary: Discover provider servers over the selected network path
+      description: Shares a limit of twelve requests per observed client address per minute with provider-target validation.
       parameters:
         - name: interface
           in: query
@@ -871,6 +884,7 @@ paths:
       operationId: validateProviderServer
       tags: [Providers]
       summary: Validate a provider target over a selected network path without running a speed test
+      description: Shares a limit of twelve requests per observed client address per minute with provider discovery.
       requestBody:
         required: true
         content:
@@ -960,11 +974,22 @@ paths:
     put:
       operationId: updateOoklaEulaAcceptance
       tags: [Settings, Providers]
-      summary: Record or revoke explicit Ookla EULA acceptance
+      summary: Record or revoke the legacy-named Ookla terms acknowledgement
       description: |
         Updates MultiSpeed's persisted technical gate for the operator-supplied
-        Ookla CLI. Acceptance does not install the CLI, grant a license, or
-        replace any permission required by Ookla's current terms.
+        Ookla CLI. When accepted and confirmed are true, the operator agrees to
+        the current EULA and Terms of Use, acknowledges having reviewed the Privacy
+        Policy, and authorizes MultiSpeed to pass --accept-license and --accept-gdpr
+        non-interactively. Ookla's public EULA describes personal, non-commercial
+        CLI use on one personal computer, excludes routers, modems, and other
+        non-PC devices, and restricts making the CLI available on a network where
+        more than one device can access it. This technical record does not install
+        the CLI, grant a license, or replace separate written authorization when a
+        deployment falls outside that express scope. Review the current official documents:
+        https://www.speedtest.net/about/eula,
+        https://www.speedtest.net/about/terms, and
+        https://www.speedtest.net/about/privacy. The route and JSON property names
+        retain EULA wording for backward compatibility.
       requestBody:
         required: true
         content:
@@ -973,7 +998,7 @@ paths:
               $ref: "#/components/schemas/OoklaEULAAcceptanceRequest"
       responses:
         "200":
-          description: Updated settings and persisted acceptance timestamp.
+          description: Updated settings and persisted acknowledgement timestamp.
           headers:
             X-Request-ID:
               $ref: "#/components/headers/RequestID"
@@ -1100,7 +1125,7 @@ paths:
       operationId: exportConfiguration
       tags: [Configuration]
       summary: Download the current portable configuration
-      description: Exports operational settings, active tasks, and active route profiles. Results and Ookla EULA acknowledgement state are intentionally excluded.
+      description: Exports operational settings, active tasks, and active route profiles. Results and Ookla terms acknowledgement state are intentionally excluded.
       responses:
         "200":
           description: Versioned JSON configuration attachment from one consistent database snapshot.
@@ -1125,7 +1150,7 @@ paths:
       summary: Atomically replace the portable configuration
       description: |
         Strictly validates the complete versioned document before replacing operational settings,
-        active tasks, and active route profiles in one transaction. Existing results and Ookla EULA
+        active tasks, and active route profiles in one transaction. Existing results and Ookla terms
         acknowledgement state are preserved. Import is rejected while any test is queued, validating,
         or running. Enabled tasks must reference a source address currently present on their interface.
       requestBody:
@@ -1458,14 +1483,10 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
     RateLimited:
-      description: Manual execution or provider discovery rate limit exceeded.
+      description: The operation-specific per-client rate limit was exceeded. Current responses do not include a Retry-After header; clients must observe the documented fixed window.
       headers:
         X-Request-ID:
           $ref: "#/components/headers/RequestID"
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
       content:
         application/json:
           schema:
@@ -2421,20 +2442,20 @@ components:
         ooklaEulaAccepted:
           type: boolean
           readOnly: true
-          description: Whether an operator recorded explicit acceptance through the dedicated licensing endpoint.
+          description: Whether an operator recorded the legacy-named technical terms acknowledgement and CLI flag authorization through the dedicated endpoint.
         ooklaEulaAcceptedAt:
           type: [string, "null"]
           format: date-time
           readOnly: true
-          description: UTC timestamp of the persisted acceptance, or null while revoked.
+          description: UTC timestamp of the persisted acknowledgement, or null while revoked.
         ooklaEulaVersion:
           type: string
           readOnly: true
-          description: Terms revision recorded with the persisted acknowledgement, or empty when none is stored.
+          description: MultiSpeed internal review marker recorded with the persisted acknowledgement, or empty when none is stored; this is not an official Ookla document version.
         ooklaEulaCurrentVersion:
           type: string
           readOnly: true
-          description: Terms revision required by this MultiSpeed release.
+          description: MultiSpeed internal review marker required by this release for reviewing the current Ookla EULA, Terms of Use, and Privacy Policy; this is not an official Ookla document version.
         ooklaEulaEffectiveAccepted:
           type: boolean
           readOnly: true
@@ -2452,9 +2473,10 @@ components:
       properties:
         accepted:
           type: boolean
+          description: Legacy-named technical gate value; true records agreement to the current Ookla EULA and Terms of Use and acknowledgement that the Privacy Policy was reviewed.
         confirmed:
           type: boolean
-          description: Must be true when accepted is true; revocation does not require confirmation.
+          description: Must be true when accepted is true and confirms authorization for MultiSpeed to pass --accept-license and --accept-gdpr non-interactively plus that the personal-computer/non-commercial deployment, device type, and any network access from multiple devices fit current documents or have separate written Ookla authorization; revocation does not require confirmation.
 
     ConfigurationSettings:
       type: object

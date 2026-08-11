@@ -3,10 +3,11 @@ package models
 
 import "time"
 
-// CurrentOoklaEULAVersion identifies the terms revision reviewed for this
-// MultiSpeed release. Bumping it invalidates older persisted acknowledgements
-// without deleting their audit metadata.
-const CurrentOoklaEULAVersion = "speedtest-eula-reviewed-2026-08-07"
+// CurrentOoklaEULAVersion is MultiSpeed's internal review marker, not an
+// official Ookla document version. Bumping it requires operators to review
+// the current EULA, Terms of Use, and Privacy Policy again without deleting
+// the older acknowledgement's audit metadata.
+const CurrentOoklaEULAVersion = "ookla-eula-terms-privacy-review-2026-08-11"
 
 const (
 	LibreSpeedBitsMethodologyVersion = "multispeed-bps-v2"

@@ -112,7 +112,7 @@ settings_json="$(curl --silent --show-error --fail "http://127.0.0.1:${port}/api
 grep -q '"ooklaEulaAccepted":false' <<<"${settings_json}"
 grep -q '"ooklaEulaEffectiveAccepted":false' <<<"${settings_json}"
 grep -q '"ooklaEulaAcceptanceSource":"none"' <<<"${settings_json}"
-grep -q '"ooklaEulaCurrentVersion":"speedtest-eula-reviewed-2026-08-07"' <<<"${settings_json}"
+grep -q '"ooklaEulaCurrentVersion":"ookla-eula-terms-privacy-review-2026-08-11"' <<<"${settings_json}"
 system_json="$(curl --silent --show-error --fail "http://127.0.0.1:${port}/api/v1/system")"
 grep -q '"schemaVersion":6' <<<"${system_json}"
 
@@ -142,7 +142,7 @@ settings_json="$(curl --silent --show-error --fail \
   --data '{"accepted":true,"confirmed":true}' \
   "http://127.0.0.1:${port}/api/v1/settings/ookla-eula")"
 grep -q '"ooklaEulaAccepted":true' <<<"${settings_json}"
-grep -q '"ooklaEulaVersion":"speedtest-eula-reviewed-2026-08-07"' <<<"${settings_json}"
+grep -q '"ooklaEulaVersion":"ookla-eula-terms-privacy-review-2026-08-11"' <<<"${settings_json}"
 grep -q '"ooklaEulaEffectiveAccepted":true' <<<"${settings_json}"
 grep -q '"ooklaEulaAcceptanceSource":"persisted"' <<<"${settings_json}"
 

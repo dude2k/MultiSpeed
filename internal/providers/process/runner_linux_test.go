@@ -5,6 +5,9 @@ package process
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -55,5 +58,35 @@ func TestRunnerScopesAndOverridesProviderEnvironment(t *testing.T) {
 	})
 	if err != nil || result.Stdout != "unset" {
 		t.Fatalf("inherited provider guard leaked: output=%q error=%v", result.Stdout, err)
+	}
+}
+
+func TestRunnerProvidesAnIsolatedWritableHomeDirectory(t *testing.T) {
+	homeDirectory := t.TempDir()
+	t.Setenv("HOME", "/nonexistent")
+	t.Setenv("XDG_CONFIG_HOME", "/nonexistent/.config")
+	result, err := (ExecRunner{}).Run(context.Background(), Request{
+		Binary:        "/bin/sh",
+		Arguments:     []string{"-c", `mkdir -p "$XDG_CONFIG_HOME/ookla" && printf '%s\n%s' "$HOME" "$XDG_CONFIG_HOME" && printf settings > "$XDG_CONFIG_HOME/ookla/speedtest-cli.json"`},
+		OutputLimit:   4096,
+		HomeDirectory: homeDirectory,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := homeDirectory + "\n" + filepath.Join(homeDirectory, ".config")
+	if result.Stdout != want {
+		t.Fatalf("provider home output=%q want %q", result.Stdout, want)
+	}
+	if contents, err := os.ReadFile(filepath.Join(homeDirectory, ".config", "ookla", "speedtest-cli.json")); err != nil || string(contents) != "settings" {
+		t.Fatalf("provider could not persist settings: contents=%q error=%v", contents, err)
+	}
+}
+
+func TestRunnerRejectsUnsafeHomeDirectories(t *testing.T) {
+	for _, homeDirectory := range []string{"relative", "../escape", "/tmp/unsafe\nvalue", strings.Repeat("x", maxArgumentLength+1)} {
+		if _, err := (ExecRunner{}).Run(context.Background(), Request{Binary: "/bin/true", HomeDirectory: homeDirectory}); err == nil {
+			t.Fatalf("unsafe provider home %q was accepted", homeDirectory)
+		}
 	}
 }

@@ -2,7 +2,7 @@
 
 MultiSpeed exposes a same-origin JSON API under `/api/v1`. The normative OpenAPI 3.1 document is [openapi.yaml](../openapi.yaml).
 
-There is no authentication. The process defaults to loopback, every request validates its `Host` syntax and listen port, cross-origin API access is disabled, and browser mutation requests validate `Origin`. An absent `Origin` remains usable for trusted command-line automation on the same protected network; network access to the listener is the security boundary. A wildcard bind accepts all valid hostnames and unicast IPs, while a specific bind can add exact proxy or LAN names through `APP_TRUSTED_HOSTS`.
+There is no authentication. The process defaults to loopback, every request validates its `Host` syntax and listen port, cross-origin API access is disabled, and browser mutation requests validate `Origin`. An absent `Origin` remains usable for trusted command-line automation on the same protected network; network access to the listener is the security boundary. A wildcard bind accepts concrete unicast IP literals without a per-IP allowlist but rejects arbitrary DNS names against DNS rebinding; exact proxy or LAN DNS names can be added through `APP_TRUSTED_HOSTS`.
 
 ## Conventions
 
@@ -39,8 +39,8 @@ Messages are safe for display but deliberately omit internal paths, command outp
 - `/route-profiles`: CRUD and read-only path validation
 - `/providers`: capabilities, availability, server discovery, and server validation
 - `/settings`: singleton operational/display settings
-- `/settings/ookla-eula`: explicit, separately persisted Ookla acceptance or revocation; acceptance requires `confirmed=true`
-- `/providers/ookla/binary`: deployment-opted-in status and bounded raw upload of one operator-supplied Linux amd64 executable; EULA acceptance is required before upload
+- `/settings/ookla-eula`: backward-compatible route for a separately persisted Ookla terms acknowledgement or revocation; `accepted=true` requires `confirmed=true`, means agreement to the current [EULA](https://www.speedtest.net/about/eula) and [Terms of Use](https://www.speedtest.net/about/terms), acknowledgement that the [Privacy Policy](https://www.speedtest.net/about/privacy) was reviewed, plus authorization for MultiSpeed to pass `--accept-license` and `--accept-gdpr`. The public EULA's express grant is personal, non-commercial CLI use on one personal computer, excludes routers/modems/other non-PC devices, and restricts network availability to multiple devices; deployments outside that scope require separate written Ookla authorization. This remains only a technical gate rather than a license grant.
+- `/providers/ookla/binary`: deployment-opted-in status and bounded raw upload of one operator-supplied Linux amd64 executable; the terms acknowledgement and CLI flag authorization are required before upload
 - `/retention/cleanup`: bounded manual result cleanup using policy or a past cutoff
 - `/exports/results.csv`, `/exports/results.json`: filtered result exports
 - `/config/export`, `/config/import`: versioned portable configuration download and atomic restore
@@ -48,7 +48,13 @@ Messages are safe for display but deliberately omit internal paths, command outp
 - `/events`: Server-Sent Events
 - `/system`: sanitized build, database, provider, interface, and uptime information
 
-Manual execution and provider discovery are rate-limited. A `429` response may include `Retry-After`.
+Rate limits are per observed client address and are held in process memory:
+
+- manual task runs: four requests per minute;
+- provider discovery and provider-target validation: a shared twelve requests per minute;
+- managed Ookla executable upload: two attempts per hour.
+
+An upload attempt is counted before deployment-policy, EULA, file, and installation validation, so repeated failed submissions can exhaust the hourly limit. A `429` response in the current API does **not** include `Retry-After`; clients must wait for the documented window. Restarting MultiSpeed clears these in-memory counters, but should not be used to bypass normal limits.
 
 ## Server-Sent Events
 
@@ -73,7 +79,7 @@ Keep the backup private: it contains task configuration, route/interface details
 
 ## Configuration transfer example
 
-Export settings, active tasks, and active route profiles without measurement history or licensing acknowledgement state:
+Export settings, active tasks, and active route profiles without measurement history or provider terms acknowledgement state:
 
 ```bash
 curl --fail-with-body \
@@ -81,7 +87,7 @@ curl --fail-with-body \
   http://127.0.0.1:8787/api/v1/config/export
 ```
 
-Import the complete document only after reviewing it. The operation replaces the current portable configuration in one transaction, preserves results and Ookla EULA acceptance, and returns `409` while a test is queued, validating, or running:
+Import the complete document only after reviewing it. The operation replaces the current portable configuration in one transaction, preserves results and the separately stored Ookla terms acknowledgement, and returns `409` while a test is queued, validating, or running:
 
 ```bash
 curl --fail-with-body \

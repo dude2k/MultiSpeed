@@ -20,6 +20,17 @@ func TestLoadUsesManagedOoklaBinaryPathAndExplicitUploadOptIn(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsRelativeOrFilesystemRootDataDirectory(t *testing.T) {
+	for _, dataDirectory := range []string{"relative-data", string(filepath.Separator)} {
+		t.Run(dataDirectory, func(t *testing.T) {
+			t.Setenv("APP_DATA_DIR", dataDirectory)
+			if _, err := Load("test", "commit", "time"); err == nil || !strings.Contains(err.Error(), "absolute non-root path") {
+				t.Fatalf("Load() error=%v", err)
+			}
+		})
+	}
+}
+
 func TestParseTrustedHostsNormalizesAndDeduplicates(t *testing.T) {
 	hosts, err := parseTrustedHosts(" dashboard.example.test,192.0.2.10,DASHBOARD.example.test,2001:db8::10 ")
 	if err != nil {

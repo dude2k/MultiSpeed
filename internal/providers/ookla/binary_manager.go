@@ -24,6 +24,7 @@ var (
 	ErrBinaryUploadDisabled = errors.New("ookla binary upload is disabled")
 	ErrBinaryTooLarge       = errors.New("ookla binary exceeds the upload limit")
 	ErrInvalidBinary        = errors.New("uploaded file is not a compatible Ookla executable")
+	ErrBinaryPathConflict   = errors.New("managed Ookla binary path must be absent or a regular file")
 )
 
 type BinaryStatus struct {
@@ -50,11 +51,17 @@ func (verify BinaryVerifierFunc) Verify(ctx context.Context, path string) (strin
 }
 
 type cliBinaryVerifier struct {
-	runner providerprocess.Runner
+	runner        providerprocess.Runner
+	homeDirectory string
 }
 
 func (verify cliBinaryVerifier) Verify(ctx context.Context, path string) (string, error) {
-	result, err := verify.runner.Run(ctx, providerprocess.Request{Binary: path, Arguments: []string{"--version"}, OutputLimit: 16 << 10})
+	if verify.homeDirectory != "" {
+		if err := ensurePrivateDirectory(verify.homeDirectory); err != nil {
+			return "", fmt.Errorf("prepare Ookla verification state: %w", err)
+		}
+	}
+	result, err := verify.runner.Run(ctx, providerprocess.Request{Binary: path, Arguments: []string{"--version"}, OutputLimit: 16 << 10, HomeDirectory: verify.homeDirectory})
 	if err != nil {
 		return "", err
 	}
@@ -78,9 +85,13 @@ type BinaryManager struct {
 func NewBinaryManager(dataDirectory, binaryPath string, enabled bool, verifier BinaryVerifier) *BinaryManager {
 	dataDirectory, dataErr := filepath.Abs(filepath.Clean(dataDirectory))
 	binaryPath, binaryErr := filepath.Abs(filepath.Clean(binaryPath))
-	managed := dataErr == nil && binaryErr == nil && pathWithin(dataDirectory, binaryPath)
+	managedPath := filepath.Join(dataDirectory, "providers", "ookla", "speedtest")
+	managed := dataErr == nil && binaryErr == nil && binaryPath == managedPath
 	if verifier == nil {
-		verifier = cliBinaryVerifier{runner: providerprocess.ExecRunner{}}
+		verifier = cliBinaryVerifier{
+			runner:        providerprocess.ExecRunner{},
+			homeDirectory: filepath.Join(dataDirectory, "providers", "ookla", "runtime", "upload-verification"),
+		}
 	}
 	return &BinaryManager{dataDir: dataDirectory, path: binaryPath, enabled: enabled, managed: managed, verifier: verifier}
 }
@@ -91,7 +102,7 @@ func (manager *BinaryManager) Status() BinaryStatus {
 	case !manager.enabled:
 		status.Message = "Manual Ookla executable upload is disabled by this deployment."
 	case !manager.managed:
-		status.Message = "Manual upload is unavailable because OOKLA_BINARY is outside APP_DATA_DIR."
+		status.Message = "Manual upload is available only at APP_DATA_DIR/providers/ookla/speedtest; use an external read-only mount without upload for every other OOKLA_BINARY path."
 	default:
 		status.Message = "Upload a separately obtained Linux amd64 Speedtest by Ookla executable."
 	}
@@ -112,6 +123,13 @@ func (manager *BinaryManager) Install(ctx context.Context, source io.Reader) (Bi
 	}
 	if err := manager.prepareParent(); err != nil {
 		return BinaryInstallResult{}, err
+	}
+	if info, err := os.Lstat(manager.path); err == nil {
+		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			return BinaryInstallResult{}, ErrBinaryPathConflict
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return BinaryInstallResult{}, fmt.Errorf("inspect managed Ookla executable: %w", err)
 	}
 
 	temporary, err := os.CreateTemp(filepath.Dir(manager.path), ".speedtest-upload-*")
@@ -195,11 +213,6 @@ func (manager *BinaryManager) prepareParent() error {
 		}
 	}
 	return nil
-}
-
-func pathWithin(parent, child string) bool {
-	relative, err := filepath.Rel(parent, child)
-	return err == nil && relative != "." && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 func validateLinuxAMD64ELF(path string) error {

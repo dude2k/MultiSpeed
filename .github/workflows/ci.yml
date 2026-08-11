@@ -212,6 +212,37 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Validate bundled license and corresponding-source artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir legal-artifacts
+          container_id="$(docker create multispeed:ci)"
+          trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container_id}:/opt/multispeed/release-artifacts/." legal-artifacts/
+          docker rm "${container_id}" >/dev/null
+          trap - EXIT
+          (
+            cd legal-artifacts
+            sha256sum -c ./*.sha256
+          )
+          license_archive="legal-artifacts/multispeed-third-party-licenses.tar.gz"
+          source_archive="$(find legal-artifacts -maxdepth 1 -type f -name 'librespeed-cli-*-multispeed-corresponding-source.tar.gz' -print -quit)"
+          test -n "${source_archive}"
+          tar -tzf "${license_archive}" > legal-artifacts/license-contents.txt
+          tar -tzf "${source_archive}" > legal-artifacts/source-contents.txt
+          grep -Fx 'multispeed/THIRD_PARTY_NOTICES.md' legal-artifacts/license-contents.txt
+          grep -Fx 'librespeed-cli/COPYING' legal-artifacts/license-contents.txt
+          grep -Fx 'librespeed-cli/COPYING.LESSER' legal-artifacts/license-contents.txt
+          grep -E '^multispeed/third-party/npm/vite@[^/]+/' legal-artifacts/license-contents.txt
+          grep -E '^multispeed/third-party/npm/tailwindcss@[^/]+/' legal-artifacts/license-contents.txt
+          grep -E '^multispeed/third-party/npm/rolldown@[^/]+/THIRD-PARTY-LICENSE$' legal-artifacts/license-contents.txt
+          grep -Fx './build-corresponding-source.sh' legal-artifacts/source-contents.txt
+          grep -Fx './COPYING' legal-artifacts/source-contents.txt
+          grep -Fx './COPYING.LESSER' legal-artifacts/source-contents.txt
+          grep -Fx './vendor/modules.txt' legal-artifacts/source-contents.txt
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}' multispeed:ci)" = 'MIT AND LGPL-3.0-only AND LGPL-3.0-or-later'
+
       - name: Scan image vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -233,11 +264,23 @@ jobs:
           format: spdx-json
           output: multispeed.spdx.json
 
+      - name: Validate frontend components in SPDX SBOM
+        shell: bash
+        run: bash scripts/validate-spdx-frontend.sh multispeed.spdx.json legal-artifacts/multispeed-third-party-licenses.tar.gz
+
       - name: Upload SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: multispeed-sbom
           path: multispeed.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload legal artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: multispeed-legal-artifacts
+          path: legal-artifacts/
           if-no-files-found: error
           retention-days: 30
 

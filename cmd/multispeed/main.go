@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -106,12 +107,12 @@ func run() error {
 		return fmt.Errorf("custom server URL policy: %w", err)
 	}
 	registry := providers.NewRegistry(
-		ookla.NewWithAcceptanceSource(configuration.OoklaBinary, func(ctx context.Context) (bool, error) {
+		ookla.NewWithAcceptanceSourceAndRuntimeDirectory(configuration.OoklaBinary, func(ctx context.Context) (bool, error) {
 			if configuration.AcceptOoklaEULA {
 				return true, nil
 			}
 			return store.OoklaEULAAcceptance(ctx)
-		}, processRunner),
+		}, filepath.Join(configuration.DataDirectory, "providers", "ookla", "runtime"), processRunner),
 		librespeed.NewWithCustomServerURLPolicy(configuration.LibreSpeedBinary, processRunner, customServerPolicy),
 		cloudflare.New(),
 	)

@@ -79,7 +79,7 @@ func run() error {
 	}
 	processRunner := providerprocess.ExecRunner{}
 	registry := providers.NewRegistry(
-		ookla.NewWithAcceptanceSource(env("OOKLA_BINARY", "speedtest"), store.OoklaEULAAcceptance, processRunner),
+		ookla.NewWithAcceptanceSourceAndRuntimeDirectory(env("OOKLA_BINARY", "speedtest"), store.OoklaEULAAcceptance, filepath.Join(dataDirectory, "providers", "ookla", "runtime"), processRunner),
 		librespeed.New(env("LIBRESPEED_BINARY", "librespeed-cli"), processRunner),
 		cloudflare.New(),
 	)

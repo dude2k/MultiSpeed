@@ -155,6 +155,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="page-grid pointer-events-none absolute inset-0" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">{children}</div>
         </main>
+        <footer className="border-t border-border px-4 py-3 text-center text-[10px] leading-5 text-muted-foreground sm:px-6 lg:px-8">
+          Cloudflare{'\u00ae'} is a trademark of Cloudflare, Inc. Ookla{'\u00ae'} and Speedtest{'\u00ae'} are registered trademarks of Ookla, LLC. MultiSpeed is an independent project and is not affiliated with, endorsed by, or sponsored by either company.
+        </footer>
       </div>
     </div>
   )

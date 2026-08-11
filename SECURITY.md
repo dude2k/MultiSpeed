@@ -13,9 +13,13 @@ Security fixes are provided for the latest tagged release. The `main` branch is 
 
 MultiSpeed does not include authentication and must only be exposed to trusted networks unless protected by an authenticating reverse proxy.
 
-The application defaults to `127.0.0.1:8787`. The Compose example listens on the trusted LAN through host networking and therefore requires host firewall policy. A wildcard bind accepts any syntactically valid hostname or unicast IP on the listen port; a specific bind can authorize additional proxy/LAN names through `APP_TRUSTED_HOSTS`. Do not expose it directly to the internet. Backups, exports, results, task definitions, source addresses, route snapshots, public IPs, and provider diagnostics can be sensitive.
+The application defaults to `127.0.0.1:8787`. The Compose example listens on the trusted LAN through host networking and therefore requires host firewall policy. A wildcard bind accepts concrete unicast IP literals on the listen port without a per-IP allowlist but rejects arbitrary DNS names against DNS rebinding; authorize only intentionally used proxy/LAN DNS names through `APP_TRUSTED_HOSTS`. Do not expose it directly to the internet. Backups, exports, results, task definitions, source addresses, route snapshots, public IPs, and provider diagnostics can be sensitive.
+
+`APP_ALLOW_OOKLA_BINARY_UPLOAD=true` opens a deliberately privileged endpoint that accepts an operator-supplied executable, validates it by running `--version`, stores it under `/data`, and later executes it for tests. Because there is no authentication, any client that can reach the listener may attempt this operation; browser requests remain subject to the same-origin check, while non-browser clients may omit `Origin`. Leave the option disabled unless it is required, and enable it only on a private trusted network or behind an authenticating reverse proxy. Same-origin checks are not a substitute for authentication against another client already inside that network.
 
 The supported container drops every Linux capability, uses `no-new-privileges`, runs non-root, has a read-only root filesystem, and receives no Docker socket or host-root mount. A report that requires `privileged`, `CAP_NET_ADMIN`, arbitrary command hooks, wildcard CORS, or hidden authentication is not an acceptable fix.
+
+See [Privacy and data flow](docs/privacy.md) for the data stored locally, outbound provider traffic, and the fields that require review before logs, exports, or backups are shared.
 
 ## Report a vulnerability
 

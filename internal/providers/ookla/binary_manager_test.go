@@ -67,8 +67,11 @@ func TestBinaryManagerRejectsInvalidFileWithoutReplacingExistingBinary(t *testin
 func TestBinaryManagerFailsClosedOutsideDataDirectoryOrWhenDisabled(t *testing.T) {
 	dataDirectory := t.TempDir()
 	for name, manager := range map[string]*BinaryManager{
-		"outside":  NewBinaryManager(dataDirectory, filepath.Join(filepath.Dir(dataDirectory), "speedtest"), true, nil),
-		"disabled": NewBinaryManager(dataDirectory, filepath.Join(dataDirectory, "speedtest"), false, nil),
+		"outside":          NewBinaryManager(dataDirectory, filepath.Join(filepath.Dir(dataDirectory), "speedtest"), true, nil),
+		"database":         NewBinaryManager(dataDirectory, filepath.Join(dataDirectory, "multispeed.db"), true, nil),
+		"runtime subtree":  NewBinaryManager(dataDirectory, filepath.Join(dataDirectory, "providers", "ookla", "runtime", "speedtest"), true, nil),
+		"alternate nested": NewBinaryManager(dataDirectory, filepath.Join(dataDirectory, "providers", "other", "speedtest"), true, nil),
+		"disabled":         NewBinaryManager(dataDirectory, filepath.Join(dataDirectory, "providers", "ookla", "speedtest"), false, nil),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if manager.Status().UploadEnabled {
@@ -78,6 +81,37 @@ func TestBinaryManagerFailsClosedOutsideDataDirectoryOrWhenDisabled(t *testing.T
 				t.Fatalf("Install error=%v", err)
 			}
 		})
+	}
+}
+
+func TestBinaryManagerRejectsDirectoryAtManagedFilePath(t *testing.T) {
+	dataDirectory := t.TempDir()
+	binaryPath := filepath.Join(dataDirectory, "providers", "ookla", "speedtest")
+	if err := os.MkdirAll(binaryPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	manager := NewBinaryManager(dataDirectory, binaryPath, true, BinaryVerifierFunc(func(context.Context, string) (string, error) {
+		t.Fatal("path conflict reached verifier")
+		return "", nil
+	}))
+	if _, err := manager.Install(context.Background(), bytes.NewReader(testAMD64ELF())); !errors.Is(err, ErrBinaryPathConflict) {
+		t.Fatalf("Install path-conflict error=%v", err)
+	}
+}
+
+func TestCLIBinaryVerifierUsesManagedHome(t *testing.T) {
+	homeDirectory := filepath.Join(t.TempDir(), "runtime", "upload-verification")
+	runner := &recordingRunner{}
+	verifier := cliBinaryVerifier{runner: runner, homeDirectory: homeDirectory}
+	version, err := verifier.Verify(context.Background(), "/tmp/speedtest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != "Speedtest by Ookla 1.2.0.84" || len(runner.requests) != 1 || runner.requests[0].HomeDirectory != homeDirectory {
+		t.Fatalf("version=%q requests=%+v", version, runner.requests)
+	}
+	if info, err := os.Stat(homeDirectory); err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
+		t.Fatalf("verification home info=%v error=%v", info, err)
 	}
 }
 

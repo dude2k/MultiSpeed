@@ -32,7 +32,7 @@ func (s *Server) uploadOoklaBinary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.withEffectiveOoklaEULA(settings).OoklaEULAEffectiveAccepted {
-		writeError(w, r, http.StatusUnprocessableEntity, "OOKLA_EULA_REQUIRED", "Review and accept the current Ookla EULA before uploading an executable.")
+		writeError(w, r, http.StatusUnprocessableEntity, "OOKLA_EULA_REQUIRED", "Record the current Ookla terms acknowledgement and CLI flag authorization before uploading an executable.")
 		return
 	}
 	if r.ContentLength == 0 {
@@ -55,6 +55,8 @@ func (s *Server) uploadOoklaBinary(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusRequestEntityTooLarge, "OOKLA_BINARY_TOO_LARGE", "The Ookla executable must not exceed 64 MiB.")
 		case errors.Is(err, ooklaprovider.ErrInvalidBinary):
 			writeError(w, r, http.StatusUnprocessableEntity, "INVALID_OOKLA_BINARY", "The file must be a Linux amd64 Speedtest by Ookla executable with valid --version output.")
+		case errors.Is(err, ooklaprovider.ErrBinaryPathConflict):
+			writeError(w, r, http.StatusConflict, "OOKLA_BINARY_PATH_CONFLICT", "The managed Ookla executable path must be absent or an existing regular file, never a directory or symbolic link.")
 		default:
 			s.logger.Error("install Ookla executable", "request_id", requestIDFrom(r.Context()), "error", err)
 			writeError(w, r, http.StatusInternalServerError, "OOKLA_INSTALL_FAILED", "The Ookla executable could not be installed.")

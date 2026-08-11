@@ -40,7 +40,10 @@ type Config struct {
 
 // Load reads configuration from environment variables and applies safe defaults.
 func Load(version, commit, buildTime string) (Config, error) {
-	dataDir := env("APP_DATA_DIR", defaultDataDirectory)
+	dataDir := filepath.Clean(env("APP_DATA_DIR", defaultDataDirectory))
+	if !filepath.IsAbs(dataDir) || strings.ContainsAny(dataDir, "\x00\r\n") || dataDir == filepath.VolumeName(dataDir)+string(filepath.Separator) {
+		return Config{}, errors.New("invalid APP_DATA_DIR: value must be an absolute non-root path")
+	}
 	listen := env("APP_LISTEN_ADDR", defaultListenAddress)
 	if err := validateListenAddress(listen); err != nil {
 		return Config{}, fmt.Errorf("invalid APP_LISTEN_ADDR: %w", err)

@@ -54,11 +54,11 @@ test('complete operator workflow through the real backend and fake provider exec
   expect(providers.find((provider) => provider.id === 'librespeed')).toMatchObject({ available: true, version: 'librespeed-cli v1.0.13+multispeed.dns2.xnet055 deterministic-e2e' })
 
   await page.goto('/settings')
-  await expect(page.getByText('Ookla provider licensing')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Record acceptance' })).toBeDisabled()
-  await page.getByRole('switch', { name: 'I reviewed and accept the current Ookla EULA' }).click()
-  await page.getByRole('button', { name: 'Record acceptance' }).click()
-  await expect(page.getByText('Acceptance recorded', { exact: true })).toBeVisible()
+  await expect(page.getByText('Ookla provider terms & authorization')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Record acknowledgement' })).toBeDisabled()
+  await page.getByRole('switch', { name: 'I agree to the current EULA and Terms of Use and reviewed the Privacy Policy' }).click()
+  await page.getByRole('button', { name: 'Record acknowledgement' }).click()
+  await expect(page.getByText('Acknowledgement recorded', { exact: true })).toBeVisible()
 
   const acceptedProvidersResponse = await page.request.get('/api/v1/providers')
   expect(acceptedProvidersResponse.ok()).toBe(true)

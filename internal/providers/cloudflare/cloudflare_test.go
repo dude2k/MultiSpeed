@@ -21,6 +21,9 @@ func TestNativeRunUsesBoundSourceAndMultipleSamples(t *testing.T) {
 		if host, _, _ := net.SplitHostPort(r.RemoteAddr); host != "127.0.0.1" {
 			t.Errorf("remote source=%q", host)
 		}
+		if got := r.Header.Get("User-Agent"); got != requestUserAgent || strings.Contains(strings.ToLower(got), "cloudflare") {
+			t.Errorf("User-Agent=%q", got)
+		}
 		w.Header().Set("CF-Ray", "abc-TST")
 		switch r.URL.Path {
 		case "/cdn-cgi/trace":

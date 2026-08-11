@@ -21,7 +21,7 @@ func TestOoklaEULAAcceptanceRequiresConfirmationAndPersistsSeparately(t *testing
 		return response
 	}
 
-	if response := request(`{"accepted":true,"confirmed":false}`); response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "EULA_CONFIRMATION_REQUIRED") {
+	if response := request(`{"accepted":true,"confirmed":false}`); response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "EULA_CONFIRMATION_REQUIRED") || !strings.Contains(response.Body.String(), "network access from multiple devices") {
 		t.Fatalf("unconfirmed acceptance status=%d body=%s", response.Code, response.Body.String())
 	}
 	if response := request(`{"accepted":true,"confirmed":true,"unexpected":true}`); response.Code != http.StatusBadRequest {

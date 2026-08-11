@@ -53,38 +53,49 @@ describe('network, settings, and system operations pages', () => {
       ...fallbackSettings,
       ooklaEulaAccepted: true,
       ooklaEulaAcceptedAt: '2026-08-05T15:00:00Z',
-      ooklaEulaVersion: 'speedtest-eula-reviewed-2026-08-07',
-      ooklaEulaCurrentVersion: 'speedtest-eula-reviewed-2026-08-07',
+      ooklaEulaVersion: 'ookla-eula-terms-privacy-review-2026-08-11',
+      ooklaEulaCurrentVersion: 'ookla-eula-terms-privacy-review-2026-08-11',
       ooklaEulaEffectiveAccepted: true,
       ooklaEulaAcceptanceSource: 'persisted',
     })
     const user = userEvent.setup()
     renderPage(<SettingsPage />, { route: '/settings' })
 
-    const terms = await screen.findByRole('link', { name: /Review current Ookla EULA/i })
+    const terms = await screen.findByRole('link', { name: /^EULA$/i })
     expect(terms).toHaveAttribute('href', 'https://www.speedtest.net/about/eula')
     expect(terms).toHaveAttribute('rel', expect.stringContaining('noopener'))
-    const record = screen.getByRole('button', { name: /Record acceptance/i })
+    expect(screen.getByRole('link', { name: /Terms of Use/i })).toHaveAttribute('href', 'https://www.speedtest.net/about/terms')
+    expect(screen.getByRole('link', { name: /Privacy Policy/i })).toHaveAttribute('href', 'https://www.speedtest.net/about/privacy')
+    const record = screen.getByRole('button', { name: /Record acknowledgement/i })
     expect(record).toBeDisabled()
 
-    await user.click(screen.getByRole('switch', { name: /I reviewed and accept the current Ookla EULA/i }))
+    await user.click(screen.getByRole('switch', { name: /I agree to the current EULA and Terms of Use and reviewed the Privacy Policy/i }))
     await user.click(record)
     await waitFor(() => expect(update).toHaveBeenCalledWith(true, true))
-    expect(await screen.findByText('Acceptance recorded')).toBeVisible()
+    expect(await screen.findByText('Acknowledgement recorded')).toBeVisible()
+    expect(screen.getByText(/authorizes MultiSpeed to pass --accept-license and --accept-gdpr/i)).toBeVisible()
+    expect(screen.getByText(/does not grant a license/i)).toBeVisible()
+    expect(screen.getByText(/personal, non-commercial CLI use on one personal computer/i)).toBeVisible()
+    expect(screen.getByText(/network where more than one device can access it/i)).toBeVisible()
+    expect(screen.getByText(/not affiliated with, endorsed by, or sponsored by Ookla/i)).toBeVisible()
   })
 
   it('shows an environment EULA override without offering a misleading revoke action', async () => {
     vi.spyOn(api, 'ooklaBinaryStatus').mockResolvedValue({ uploadEnabled: false, installed: false, maxUploadBytes: 64 * 1024 * 1024, message: 'Manual upload disabled.' })
     vi.spyOn(api, 'settings').mockResolvedValue({
       ...fallbackSettings,
-      ooklaEulaCurrentVersion: 'speedtest-eula-reviewed-2026-08-07',
+      ooklaEulaCurrentVersion: 'ookla-eula-terms-privacy-review-2026-08-11',
       ooklaEulaEffectiveAccepted: true,
       ooklaEulaAcceptanceSource: 'environment',
     })
     renderPage(<SettingsPage />, { route: '/settings' })
-    expect(await screen.findByText('Accepted by environment')).toBeVisible()
+    expect(await screen.findByText('Enabled by environment')).toBeVisible()
     expect(screen.getByText('ACCEPT_OOKLA_EULA=true')).toBeVisible()
-    expect(screen.queryByRole('button', { name: /Revoke acceptance/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/environment override authorizes MultiSpeed to pass --accept-license and --accept-gdpr/i)).toBeVisible()
+    expect(screen.getByText(/does not grant a license/i)).toBeVisible()
+    expect(screen.getByText(/excludes routers, modems, and other non-PC devices/i)).toBeVisible()
+    expect(screen.getByText(/network where more than one device can access it/i)).toBeVisible()
+    expect(screen.queryByRole('button', { name: /Revoke acknowledgement/i })).not.toBeInTheDocument()
   })
 
   it('previews and confirms a configuration import before replacing saved values', async () => {

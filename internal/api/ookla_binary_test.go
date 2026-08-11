@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -80,6 +81,21 @@ func TestOoklaBinaryUploadFailsClosed(t *testing.T) {
 				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 			}
 		})
+	}
+}
+
+func TestOoklaBinaryUploadReportsManagedPathConflict(t *testing.T) {
+	handler, binaryPath := ooklaUploadTestHandler(t, true, true)
+	if err := os.MkdirAll(binaryPath, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "http://multispeed.local/api/v1/providers/ookla/binary", bytes.NewReader(apiTestAMD64ELF()))
+	request.Header.Set("Content-Type", "application/octet-stream")
+	request.Header.Set("Origin", "http://multispeed.local")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusConflict || !bytes.Contains(response.Body.Bytes(), []byte("OOKLA_BINARY_PATH_CONFLICT")) {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

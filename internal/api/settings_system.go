@@ -67,11 +67,11 @@ func (s *Server) updateOoklaEULA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if request.Accepted == nil || request.Confirmed == nil {
-		writeError(w, r, http.StatusUnprocessableEntity, "EULA_REQUEST_INCOMPLETE", "Both accepted and confirmed are required.")
+		writeError(w, r, http.StatusUnprocessableEntity, "EULA_REQUEST_INCOMPLETE", "Both accepted and confirmed are required by this legacy-named technical acknowledgement endpoint.")
 		return
 	}
 	if *request.Accepted && !*request.Confirmed {
-		writeError(w, r, http.StatusUnprocessableEntity, "EULA_CONFIRMATION_REQUIRED", "Explicit confirmation is required before recording Ookla EULA acceptance.")
+		writeError(w, r, http.StatusUnprocessableEntity, "EULA_CONFIRMATION_REQUIRED", "Explicit agreement to the current Ookla EULA and Terms of Use, review of its Privacy Policy, authorization for --accept-license and --accept-gdpr, and confirmation that the deployment, device type, and any network access from multiple devices fit the express personal-computer/non-commercial grant or have separate written Ookla authorization are required.")
 		return
 	}
 	if err := s.store.SetOoklaEULAAcceptance(r.Context(), *request.Accepted); err != nil {

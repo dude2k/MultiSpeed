@@ -26,6 +26,7 @@ import (
 const (
 	defaultBaseURL     = "https://speed.cloudflare.com"
 	methodologyVersion = "cloudflare-native-bounded-v2"
+	requestUserAgent   = "MultiSpeed/network-test-v2"
 	defaultPayloadCap  = int64(128 << 20)
 	absolutePayloadCap = int64(512 << 20)
 )
@@ -302,7 +303,7 @@ func (a *Adapter) upload(ctx context.Context, client *http.Client, size int64) (
 	if firstByte.IsZero() {
 		return 0, "", errors.New("first response byte was not observed")
 	}
-	// Cloudflare's upload Server-Timing includes receipt of the request body.
+	// The upload Server-Timing returned by Cloudflare includes receipt of the request body.
 	// Subtracting it removes the transfer itself and leaves approximately one
 	// RTT, producing impossible throughput that scales with payload size.
 	duration := firstByte.Sub(started)
@@ -321,7 +322,7 @@ func do(ctx context.Context, client *http.Client, method, endpoint string, body 
 		request = request.WithContext(httptrace.WithClientTrace(request.Context(), trace))
 	}
 	request.Header.Set("Accept-Encoding", "identity")
-	request.Header.Set("User-Agent", "MultiSpeed/"+methodologyVersion)
+	request.Header.Set("User-Agent", requestUserAgent)
 	if method == http.MethodPost {
 		request.Header.Set("Content-Type", "application/octet-stream")
 		request.ContentLength = length

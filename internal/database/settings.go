@@ -34,15 +34,17 @@ FROM settings WHERE singleton=1`).Scan(&settings.DisplayUnits, &settings.Default
 	if ooklaVersion.Valid {
 		settings.OoklaEULAVersion = ooklaVersion.String
 	}
-	// A stored acknowledgement is effective only for the exact terms revision
-	// reviewed by this release. Keep its timestamp/version visible for audit.
+	// A stored technical acknowledgement is effective only for the exact
+	// MultiSpeed review marker required by this release. The marker is not a
+	// vendor document version; keep its timestamp and marker visible for audit.
 	settings.OoklaEULAAccepted = settings.OoklaEULAAccepted && settings.OoklaEULAVersion == models.CurrentOoklaEULAVersion
 	return settings, err
 }
 
-// SetOoklaEULAAcceptance records or revokes the operator's explicit consent.
+// SetOoklaEULAAcceptance records or revokes the operator's explicit terms
+// acknowledgement and authorization for the non-interactive CLI flags.
 // It is intentionally separate from UpdateSettings so a routine settings
-// replacement cannot accidentally change a licensing decision.
+// replacement cannot accidentally change that decision.
 func (s *Store) SetOoklaEULAAcceptance(ctx context.Context, accepted bool) error {
 	var acceptedAt any
 	if accepted {
@@ -53,7 +55,7 @@ func (s *Store) SetOoklaEULAAcceptance(ctx context.Context, accepted bool) error
 		version = models.CurrentOoklaEULAVersion
 	}
 	if _, err := s.db.ExecContext(ctx, `UPDATE settings SET ookla_eula_accepted=?, ookla_eula_accepted_at=?, ookla_eula_version=? WHERE singleton=1`, accepted, acceptedAt, version); err != nil {
-		return fmt.Errorf("update Ookla EULA acceptance: %w", err)
+		return fmt.Errorf("update Ookla terms acknowledgement: %w", err)
 	}
 	return nil
 }
@@ -62,7 +64,7 @@ func (s *Store) OoklaEULAAcceptance(ctx context.Context) (bool, error) {
 	var accepted bool
 	var version sql.NullString
 	if err := s.db.QueryRowContext(ctx, `SELECT ookla_eula_accepted, ookla_eula_version FROM settings WHERE singleton=1`).Scan(&accepted, &version); err != nil {
-		return false, fmt.Errorf("read Ookla EULA acceptance: %w", err)
+		return false, fmt.Errorf("read Ookla terms acknowledgement: %w", err)
 	}
 	return accepted && version.Valid && version.String == models.CurrentOoklaEULAVersion, nil
 }

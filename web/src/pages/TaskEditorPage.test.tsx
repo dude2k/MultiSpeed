@@ -157,8 +157,8 @@ describe('task editor', () => {
       ...fallbackSettings,
       ooklaEulaAccepted: true,
       ooklaEulaAcceptedAt: '2026-08-10T00:00:00Z',
-      ooklaEulaVersion: 'speedtest-eula-reviewed-2026-08-07',
-      ooklaEulaCurrentVersion: 'speedtest-eula-reviewed-2026-08-07',
+      ooklaEulaVersion: 'ookla-eula-terms-privacy-review-2026-08-11',
+      ooklaEulaCurrentVersion: 'ookla-eula-terms-privacy-review-2026-08-11',
       ooklaEulaEffectiveAccepted: true,
       ooklaEulaAcceptanceSource: 'persisted',
     })

@@ -30,6 +30,6 @@ that bound source. It never retries through an unbound dialer.
 
 `source_bound_resolver_test.go` runs during the container build. Its local DNS
 fixture returns a truncated UDP response, completes over TCP, and asserts that
-both connections originate from the selected source address. The test file is
-removed before the CLI binary is compiled, but the complete overlay and test
-are shipped beside the upstream source archive and license in the image.
+both connections originate from the selected source address. Go excludes the
+`_test.go` file from the production binary, while the complete overlay and test
+remain in the corresponding-source archive and notices shipped with the image.

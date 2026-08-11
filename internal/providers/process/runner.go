@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -19,10 +20,11 @@ const maxArgumentLength = 4096
 const providerEnvironmentPrefix = "MULTISPEED_PROVIDER_"
 
 type Request struct {
-	Binary      string
-	Arguments   []string
-	Stdin       []byte
-	OutputLimit int
+	Binary        string
+	Arguments     []string
+	Stdin         []byte
+	OutputLimit   int
+	HomeDirectory string
 	// Environment contains narrowly scoped, non-secret execution guardrails.
 	// Keys are restricted to the MULTISPEED_PROVIDER_ namespace. Inherited
 	// values in that namespace are stripped so only this request can enable a
@@ -55,7 +57,11 @@ func (ExecRunner) Run(ctx context.Context, request Request) (Result, error) {
 			return Result{}, errors.New("provider argument is invalid")
 		}
 	}
-	environment, err := providerEnvironment(request.Environment)
+	homeDirectory, err := validateHomeDirectory(request.HomeDirectory)
+	if err != nil {
+		return Result{}, err
+	}
+	environment, err := providerEnvironment(request.Environment, homeDirectory)
 	if err != nil {
 		return Result{}, err
 	}
@@ -98,7 +104,17 @@ func (ExecRunner) Run(ctx context.Context, request Request) (Result, error) {
 	return result, nil
 }
 
-func providerEnvironment(overrides map[string]string) ([]string, error) {
+func validateHomeDirectory(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	if len(value) > maxArgumentLength || strings.ContainsAny(value, "\x00\r\n") || !filepath.IsAbs(value) {
+		return "", errors.New("provider home directory is invalid")
+	}
+	return filepath.Clean(value), nil
+}
+
+func providerEnvironment(overrides map[string]string, homeDirectory string) ([]string, error) {
 	if len(overrides) > 16 {
 		return nil, errors.New("too many provider environment values")
 	}
@@ -113,9 +129,14 @@ func providerEnvironment(overrides map[string]string) ([]string, error) {
 	environment := make([]string, 0, len(os.Environ())+len(keys))
 	for _, inherited := range os.Environ() {
 		name, _, _ := strings.Cut(inherited, "=")
-		if !strings.HasPrefix(strings.ToUpper(name), providerEnvironmentPrefix) {
+		upperName := strings.ToUpper(name)
+		if !strings.HasPrefix(upperName, providerEnvironmentPrefix) &&
+			(homeDirectory == "" || (upperName != "HOME" && upperName != "XDG_CONFIG_HOME")) {
 			environment = append(environment, inherited)
 		}
+	}
+	if homeDirectory != "" {
+		environment = append(environment, "HOME="+homeDirectory, "XDG_CONFIG_HOME="+filepath.Join(homeDirectory, ".config"))
 	}
 	for _, key := range keys {
 		environment = append(environment, key+"="+overrides[key])
