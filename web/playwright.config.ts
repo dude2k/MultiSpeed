@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 const inheritedEnvironment = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
 const backendPort = process.env.MULTISPEED_E2E_BACKEND_PORT ?? '18787'
 const backendURL = `http://127.0.0.1:${backendPort}`
+const reuseBackend = process.env.MULTISPEED_E2E_REUSE_BACKEND === 'true'
 
 export default defineConfig({
   testDir: './e2e',
@@ -24,7 +25,7 @@ export default defineConfig({
       command: 'node ./e2e/start-backend.mjs',
       url: `${backendURL}/api/v1/readyz`,
       env: { ...inheritedEnvironment, MULTISPEED_E2E_BACKEND_PORT: backendPort },
-      reuseExistingServer: false,
+      reuseExistingServer: reuseBackend,
       timeout: 300_000,
     },
     {

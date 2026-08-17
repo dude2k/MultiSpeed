@@ -20,6 +20,29 @@ func TestLoadUsesManagedOoklaBinaryPathAndExplicitUploadOptIn(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsInvalidBooleanEnvironmentValues(t *testing.T) {
+	for _, key := range []string{"ACCEPT_OOKLA_EULA", "APP_ALLOW_OOKLA_BINARY_UPLOAD", "APP_METRICS_ENABLED"} {
+		t.Run(key, func(t *testing.T) {
+			t.Setenv(key, "flase")
+			if _, err := Load("test", "commit", "time"); err == nil || !strings.Contains(err.Error(), key) {
+				t.Fatalf("Load() error=%v", err)
+			}
+		})
+	}
+}
+
+func TestLoadTrimsBooleanEnvironmentValues(t *testing.T) {
+	t.Setenv("ACCEPT_OOKLA_EULA", " true ")
+	t.Setenv("APP_ALLOW_OOKLA_BINARY_UPLOAD", " false ")
+	configuration, err := Load("test", "commit", "time")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !configuration.AcceptOoklaEULA || configuration.AllowOoklaBinaryUpload {
+		t.Fatalf("unexpected booleans: accept=%v upload=%v", configuration.AcceptOoklaEULA, configuration.AllowOoklaBinaryUpload)
+	}
+}
+
 func TestLoadRejectsRelativeOrFilesystemRootDataDirectory(t *testing.T) {
 	for _, dataDirectory := range []string{"relative-data", string(filepath.Separator)} {
 		t.Run(dataDirectory, func(t *testing.T) {

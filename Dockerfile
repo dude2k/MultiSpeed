@@ -172,6 +172,7 @@ ENV APP_LISTEN_ADDR=127.0.0.1:8787 \
     LIBRESPEED_BINARY=/usr/local/bin/librespeed-cli \
     OOKLA_BINARY=/data/providers/ookla/speedtest \
     APP_ALLOW_OOKLA_BINARY_UPLOAD=false \
+    APP_METRICS_ENABLED=false \
     ACCEPT_OOKLA_EULA=false
 
 USER 10001:10001

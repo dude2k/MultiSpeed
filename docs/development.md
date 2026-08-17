@@ -40,6 +40,7 @@ npm ci
 npm run lint
 npm run typecheck
 npm run test
+npm run generate:api-types
 npm run build
 ```
 

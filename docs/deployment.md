@@ -107,6 +107,10 @@ curl --fail http://127.0.0.1:8787/api/v1/readyz
 
 `healthz` indicates that the process is alive. `readyz` additionally reflects startup dependencies such as migrations/database access. The Docker healthcheck targets the configured local listener.
 
+## Metrics
+
+Set `APP_METRICS_ENABLED=true` to expose Prometheus/OpenMetrics data at `/metrics`. The endpoint includes bounded route-template HTTP labels, request duration and in-flight counts, Go/process metrics, and current task, result, and active-run gauges. It follows the same trusted-host checks as the UI, but MultiSpeed does not add separate metrics authentication; restrict scraping to a trusted network or an authenticating reverse proxy. Leave it disabled when it is not needed.
+
 ## Reverse proxy
 
 MultiSpeed does not implement authentication. For remote access, use a separate operator-managed reverse proxy with TLS and authentication, bind MultiSpeed to loopback, and preserve streaming for `/api/v1/events`. Add the public DNS name to `APP_TRUSTED_HOSTS` and forward that hostname consistently so same-origin mutation validation remains effective. The backend rejects an explicit Host port different from `APP_LISTEN_ADDR`; configure the proxy's upstream `Host` header without the external port (for example, an Nginx `$host`) or with the backend listen port. Do not add permissive CORS headers.

@@ -18,6 +18,7 @@ type HTTPPolicy struct {
 	DataDirectory                string
 	OoklaBinaryPath              string
 	AllowOoklaBinaryUpload       bool
+	MetricsEnabled               bool
 }
 
 type hostPolicy struct {

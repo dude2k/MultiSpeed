@@ -15,8 +15,8 @@ scripts/*
 *.log
 bin
 coverage
-playwright-report
-test-results
+**/playwright-report
+**/test-results
 web/node_modules
 web/dist
 multispeed

@@ -178,6 +178,7 @@ Process configuration is intentionally small; persisted runtime settings are man
 | `APP_TRUSTED_HOSTS` | empty | empty | Comma-separated exact proxy/LAN DNS names or IPs; wildcard listeners already accept unicast IP literals but require explicit DNS names to prevent DNS rebinding |
 | `APP_ALLOWED_CUSTOM_SERVER_URLS` | empty | empty | Comma-separated exact LibreSpeed custom backend base URLs; empty disables custom URLs, and plain HTTP additionally requires the task's explicit insecure opt-in |
 | `APP_ALLOW_OOKLA_BINARY_UPLOAD` | `false` | `false` | Enables bounded upload and execution validation of one operator-supplied Linux amd64 Ookla executable; no authentication, trusted private networks only |
+| `APP_METRICS_ENABLED` | `false` | `false` | Enables the Prometheus/OpenMetrics endpoint at `/metrics`; protected by the listener's trusted-host policy but not by separate authentication |
 | `APP_DATA_DIR` | `/data` | `/data` (fixed by supplied Compose) | Database and managed-provider directory; keep the `/data` mount writable |
 | `APP_LOG_LEVEL` | `INFO` | `INFO` | `DEBUG`, `INFO`, `WARN`, or `ERROR` |
 | `APP_SHUTDOWN_TIMEOUT` | `20s` | `20s` | Graceful shutdown deadline |
@@ -186,7 +187,7 @@ Process configuration is intentionally small; persisted runtime settings are man
 | `OOKLA_BINARY` | `/data/providers/ookla/speedtest` | `/data/providers/ookla/speedtest` | Managed or externally supplied Ookla executable path |
 | `ACCEPT_OOKLA_EULA` | `false` | `false` | Legacy-named headless override authorizing non-interactive `--accept-license`/`--accept-gdpr`; technical gate only, never a license grant |
 
-No environment-variable values are exposed by the system API.
+Boolean variables reject malformed values instead of silently falling back. No environment-variable values are exposed by the system API.
 
 ## Development
 

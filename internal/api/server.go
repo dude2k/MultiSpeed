@@ -58,6 +58,7 @@ type Server struct {
 	ooklaBinary                  *ooklaprovider.BinaryManager
 	ooklaEULAEnvironmentAccepted bool
 	configurationMu              sync.Mutex
+	metrics                      *httpMetrics
 }
 
 func New(store *database.Store, schedule *scheduler.Scheduler, executionManager *execution.Manager, interfaces *network.InterfaceService,
@@ -66,18 +67,28 @@ func New(store *database.Store, schedule *scheduler.Scheduler, executionManager 
 	if err != nil {
 		panic(err)
 	}
-	return &Server{store: store, scheduler: schedule, execution: executionManager, interfaces: interfaces, routes: routes, providers: registry, broker: broker, logger: logger,
+	server := &Server{store: store, scheduler: schedule, execution: executionManager, interfaces: interfaces, routes: routes, providers: registry, broker: broker, logger: logger,
 		build: build, hosts: newHostPolicy(httpPolicy, interfaces), statsService: statistics.New(store), retentionCleaner: cleaner, startedAt: time.Now().UTC(), ready: func(ctx context.Context) error {
 			_, err := store.SchemaVersion(ctx)
 			return err
 		}, manualLimit: newRateGate(4, time.Minute), discoveryLimit: newRateGate(12, time.Minute), ooklaUploadLimit: newRateGate(2, time.Hour),
 		ooklaBinary:                  ooklaprovider.NewBinaryManager(httpPolicy.DataDirectory, httpPolicy.OoklaBinaryPath, httpPolicy.AllowOoklaBinaryUpload, nil),
 		ooklaEULAEnvironmentAccepted: httpPolicy.OoklaEULAEnvironmentAccepted}
+	if httpPolicy.MetricsEnabled {
+		server.metrics = newHTTPMetrics(store)
+	}
+	return server
 }
 
 func (s *Server) Handler() http.Handler {
 	router := chi.NewRouter()
 	router.Use(s.requestID, s.recoverer, s.securityHeaders, s.requestLog, s.trustedHost, s.sameOrigin, s.contentType)
+	if s.metrics != nil {
+		router.Use(s.metrics.observe)
+		router.Handle("/metrics", s.metrics.handler)
+	} else {
+		router.HandleFunc("/metrics", http.NotFound)
+	}
 	router.Route("/api/v1", func(api chi.Router) {
 		api.Get("/healthz", s.health)
 		api.Get("/readyz", s.readyz)

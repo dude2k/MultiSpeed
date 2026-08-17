@@ -30,6 +30,7 @@ type Config struct {
 	LogLevel                slog.Level
 	AcceptOoklaEULA         bool
 	AllowOoklaBinaryUpload  bool
+	MetricsEnabled          bool
 	OoklaBinary             string
 	LibreSpeedBinary        string
 	ShutdownTimeout         time.Duration
@@ -66,6 +67,18 @@ func Load(version, commit, buildTime string) (Config, error) {
 	if err != nil || shutdown <= 0 || shutdown > 5*time.Minute {
 		return Config{}, errors.New("invalid APP_SHUTDOWN_TIMEOUT: value must be between 1ns and 5m")
 	}
+	acceptOoklaEULA, err := envBool("ACCEPT_OOKLA_EULA", false)
+	if err != nil {
+		return Config{}, err
+	}
+	allowOoklaBinaryUpload, err := envBool("APP_ALLOW_OOKLA_BINARY_UPLOAD", false)
+	if err != nil {
+		return Config{}, err
+	}
+	metricsEnabled, err := envBool("APP_METRICS_ENABLED", false)
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		ListenAddress:           listen,
@@ -74,8 +87,9 @@ func Load(version, commit, buildTime string) (Config, error) {
 		DataDirectory:           dataDir,
 		DatabasePath:            filepath.Join(dataDir, "multispeed.db"),
 		LogLevel:                level,
-		AcceptOoklaEULA:         envBool("ACCEPT_OOKLA_EULA", false),
-		AllowOoklaBinaryUpload:  envBool("APP_ALLOW_OOKLA_BINARY_UPLOAD", false),
+		AcceptOoklaEULA:         acceptOoklaEULA,
+		AllowOoklaBinaryUpload:  allowOoklaBinaryUpload,
+		MetricsEnabled:          metricsEnabled,
 		OoklaBinary:             env("OOKLA_BINARY", filepath.Join(dataDir, "providers", "ookla", "speedtest")),
 		LibreSpeedBinary:        env("LIBRESPEED_BINARY", "librespeed-cli"),
 		ShutdownTimeout:         shutdown,
@@ -167,14 +181,14 @@ func env(key, fallback string) string {
 	return fallback
 }
 
-func envBool(key string, fallback bool) bool {
+func envBool(key string, fallback bool) (bool, error) {
 	raw, ok := os.LookupEnv(key)
 	if !ok {
-		return fallback
+		return fallback, nil
 	}
-	value, err := strconv.ParseBool(raw)
+	value, err := strconv.ParseBool(strings.TrimSpace(raw))
 	if err != nil {
-		return fallback
+		return false, fmt.Errorf("invalid %s: value must be a boolean", key)
 	}
-	return value
+	return value, nil
 }
