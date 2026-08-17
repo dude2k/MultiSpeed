@@ -190,7 +190,7 @@ No environment-variable values are exposed by the system API.
 
 ## Development
 
-Prerequisites are Go 1.26.5, Node.js 24, npm 11, and Linux for networking/integration behavior.
+Prerequisites are Go 1.26.6, Node.js 24, npm 11, and Linux for networking/integration behavior.
 
 ```bash
 go mod download

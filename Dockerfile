@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 ARG NODE_VERSION=24.19.0
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.26.6
 ARG DEBIAN_RELEASE=bookworm
 
 FROM node:${NODE_VERSION}-${DEBIAN_RELEASE}-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS frontend-build
@@ -21,7 +21,7 @@ RUN npm run build && \
       /out/dependency-licenses \
       /license-overrides/npm
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:8d36439c36258ba98de1bf2b316eda72905f9d743117119f6db9705c49245644 AS librespeed-build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS librespeed-build
 ARG LIBRESPEED_VERSION=v1.0.13
 ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet055
 ARG LIBRESPEED_X_NET_VERSION=v0.55.0
@@ -78,7 +78,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     cd /out/source; \
     sha256sum "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz" > "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz.sha256"
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:8d36439c36258ba98de1bf2b316eda72905f9d743117119f6db9705c49245644 AS backend-build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS backend-build
 ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown

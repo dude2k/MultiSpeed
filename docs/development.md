@@ -4,7 +4,7 @@ MultiSpeed's networking behavior is Linux-specific. Editing and unit tests can r
 
 ## Toolchain
 
-- Go 1.26.5
+- Go 1.26.6
 - Node.js 24 and npm 11
 - Docker Engine with Compose v2 and BuildKit
 - `golangci-lint` v2 (version pinned in CI)
