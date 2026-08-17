@@ -1,0 +1,108 @@
+name: Refresh Dependabot frontend assets
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: dependabot-frontend-assets-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate originating pull request
+        id: pull-request
+        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
+        with:
+          script: |
+            const run = context.payload.workflow_run
+            const reference = run.pull_requests?.[0]
+            if (!reference?.number) {
+              core.setFailed('The CI run is not associated with a pull request.')
+              return
+            }
+            const { data: pull } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: reference.number,
+            })
+            const valid = pull.state === 'open' &&
+              pull.base.ref === 'main' &&
+              pull.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}` &&
+              pull.user?.login === 'dependabot[bot]' &&
+              pull.head.ref.startsWith('dependabot/npm_and_yarn/web/') &&
+              pull.head.sha === run.head_sha
+            if (!valid) {
+              core.setFailed('The workflow run is not an eligible same-repository Dependabot npm pull request.')
+              return
+            }
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: pull.number,
+              per_page: 100,
+            })
+            const allowed = files.every(({ filename }) =>
+              filename === 'web/package.json' ||
+              filename === 'web/package-lock.json' ||
+              filename.startsWith('internal/frontend/dist/'))
+            if (!allowed) {
+              core.setFailed('The Dependabot pull request changes files outside the approved frontend dependency and generated-asset paths.')
+              return
+            }
+            core.setOutput('number', String(pull.number))
+            core.setOutput('head-ref', pull.head.ref)
+            core.setOutput('head-sha', pull.head.sha)
+
+      - name: Check out the validated Dependabot commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.pull-request.outputs.head-ref }}
+          fetch-depth: 1
+
+      - name: Download unprivileged frontend build
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: dependabot-frontend-dist-${{ steps.pull-request.outputs.number }}
+          path: .dependabot-frontend-dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Replace only embedded frontend assets
+        shell: bash
+        env:
+          HEAD_REF: ${{ steps.pull-request.outputs.head-ref }}
+          HEAD_SHA: ${{ steps.pull-request.outputs.head-sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${HEAD_SHA}"
+          test -f .dependabot-frontend-dist/index.html
+          test -z "$(find .dependabot-frontend-dist -type l -print -quit)"
+          rsync --archive --delete .dependabot-frontend-dist/ internal/frontend/dist/
+          mapfile -t changed < <(
+            { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u
+          )
+          test "${#changed[@]}" -gt 0
+          for path in "${changed[@]}"; do
+            case "${path}" in
+              internal/frontend/dist/*) ;;
+              *) printf 'Refusing unexpected changed path: %s\n' "${path}" >&2; exit 1 ;;
+            esac
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- internal/frontend/dist
+          git commit -m 'chore(web): refresh embedded frontend assets'
+          git push origin "HEAD:${HEAD_REF}"

@@ -77,7 +77,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
             isActive ? 'bg-accent font-semibold text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
         >
-          {({ isActive }) => <><Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} /><span className="min-w-0"><span className="block leading-4">{label}</span><span className={cn('mt-0.5 block text-[10px] font-normal leading-3', isActive ? 'text-accent-foreground/65' : 'text-muted-foreground/70')}>{subtitle}</span></span></>}
+          {({ isActive }) => <><Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} /><span className="min-w-0"><span className="block leading-4">{label}</span><span className={cn('mt-0.5 block text-[10px] font-normal leading-3', isActive ? 'text-accent-foreground' : 'text-muted-foreground')}>{subtitle}</span></span></>}
         </NavLink>
       ))}
     </nav>

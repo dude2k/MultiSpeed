@@ -26,7 +26,7 @@ const settingsSchema = z.object({
   allowSeparateWanConcurrency: z.boolean(),
   retentionMode: z.enum(['forever', 'days', 'months']),
   retentionValue: z.number().int().min(0).max(3650),
-  defaultChartRange: z.string().min(1),
+  defaultChartRange: z.enum(['24h', '7d', '30d', '90d']),
   interfaceRefreshIntervalSeconds: z.number().int().min(5).max(3600),
   defaultTaskTimeoutSeconds: z.number().int().min(5).max(3600),
   databaseMaintenanceSchedule: z.string().refine(validateCron, 'Enter a valid five-field cron expression.'),

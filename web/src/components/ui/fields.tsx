@@ -1,7 +1,7 @@
 import * as LabelPrimitive from '@radix-ui/react-label'
 import * as SwitchPrimitive from '@radix-ui/react-switch'
 import { ChevronDown } from 'lucide-react'
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { cloneElement, forwardRef, isValidElement, useId, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, type, ...props }, ref) {
@@ -54,19 +54,38 @@ export function Label({ className, ...props }: React.ComponentPropsWithoutRef<ty
 }
 
 export function Field({ label, hint, error, required, children, className }: { label: string; hint?: string | undefined; error?: string | undefined; required?: boolean | undefined; children: React.ReactNode; className?: string | undefined }) {
+  const generatedId = useId()
+  const controlId = isValidElement<AccessibleControlProps>(children) && children.props.id ? children.props.id : generatedId
+  const hintId = hint ? `${controlId}-hint` : undefined
+  const errorId = error ? `${controlId}-error` : undefined
+  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+  const accessibleProps: AccessibleControlProps = { id: controlId }
+  if (describedBy) accessibleProps['aria-describedby'] = describedBy
+  if (error) accessibleProps['aria-invalid'] = true
+  if (required) accessibleProps['aria-required'] = true
+  const control = isValidElement<AccessibleControlProps>(children)
+    ? cloneElement(children, accessibleProps)
+    : children
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <Label>
+        <Label htmlFor={controlId}>
           {label}
           {required ? <span className="ml-1 text-rose-500" aria-hidden="true">*</span> : null}
         </Label>
-        {hint ? <span className="text-[11px] text-muted-foreground">{hint}</span> : null}
+        {hint ? <span id={hintId} className="text-[11px] text-muted-foreground">{hint}</span> : null}
       </div>
-      {children}
-      {error ? <p className="text-xs font-medium text-rose-600 dark:text-rose-400" role="alert">{error}</p> : null}
+      {control}
+      {error ? <p id={errorId} className="text-xs font-medium text-rose-600 dark:text-rose-400" role="alert">{error}</p> : null}
     </div>
   )
+}
+
+interface AccessibleControlProps {
+  id?: string
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean
+  'aria-required'?: boolean
 }
 
 export function Switch({ checked, onCheckedChange, disabled, id, 'aria-label': ariaLabel }: { checked: boolean; onCheckedChange: (checked: boolean) => void; disabled?: boolean; id?: string; 'aria-label'?: string }) {

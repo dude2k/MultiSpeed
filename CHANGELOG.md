@@ -4,6 +4,19 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-17
+
+### Added
+
+- Add opt-in Prometheus metrics for HTTP traffic and persisted application state at `/metrics`.
+- Generate frontend API models from OpenAPI and enforce generated-contract drift in CI.
+- Run automated WCAG A/AA accessibility scans across the primary operator pages.
+
+### Changed
+
+- Reject malformed boolean environment values instead of silently treating them as false.
+- Automatically refresh committed frontend assets for eligible same-repository Dependabot npm pull requests through a privilege-separated workflow.
+
 ### Security
 
 - Upgrade the build toolchain to Go 1.26.6 and the patched LibreSpeed overlay to `golang.org/x/net` v0.56.0.
@@ -87,7 +100,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/dude2k/MultiSpeed/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/dude2k/MultiSpeed/compare/v1.0.1...v1.0.2

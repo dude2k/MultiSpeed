@@ -23,6 +23,8 @@ Useful overrides:
 - `MULTISPEED_E2E_DOCKER_COMMAND`: Docker executable to use for fallback.
 - `MULTISPEED_E2E_DOCKER_IMAGE`: prebuilt compatible test image; skips build.
 - `MULTISPEED_E2E_BACKEND_PORT`: backend port, default `18787`.
+- `MULTISPEED_E2E_REUSE_BACKEND=true`: reuse an already healthy backend on the
+  configured port without starting or stopping it.
 
 The command/image override must expose the same test-backend composition if the
 measurement assertions are expected to pass. Every run receives a fresh SQLite

@@ -136,7 +136,8 @@ func run() error {
 		api.BuildInfo{Version: version, GitCommit: gitCommit, BuildTime: buildTime},
 		api.HTTPPolicy{ListenAddress: configuration.ListenAddress, TrustedHosts: configuration.TrustedHosts,
 			OoklaEULAEnvironmentAccepted: configuration.AcceptOoklaEULA, DataDirectory: configuration.DataDirectory,
-			OoklaBinaryPath: configuration.OoklaBinary, AllowOoklaBinaryUpload: configuration.AllowOoklaBinaryUpload})
+			OoklaBinaryPath: configuration.OoklaBinary, AllowOoklaBinaryUpload: configuration.AllowOoklaBinaryUpload,
+			MetricsEnabled: configuration.MetricsEnabled})
 	httpServer := &http.Server{Addr: configuration.ListenAddress, Handler: apiServer.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 32 << 10}
 	serveErrors := make(chan error, 1)
 	go func() {
