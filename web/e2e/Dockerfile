@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.26.6
 ARG DEBIAN_RELEASE=bookworm
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:8d36439c36258ba98de1bf2b316eda72905f9d743117119f6db9705c49245644 AS build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download

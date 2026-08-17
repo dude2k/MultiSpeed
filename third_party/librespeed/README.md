@@ -2,9 +2,9 @@
 
 MultiSpeed builds the immutable `github.com/librespeed/speedtest-cli` v1.0.13
 module, then applies this LGPL-3.0-or-later overlay before compiling it.
-The build also pins `golang.org/x/net` v0.55.0 (and the compatible transitive
-versions selected by Go 1.26.5) instead of upstream's vulnerable v0.49.0.
-The resulting compatibility marker is `+multispeed.dns2.xnet055`.
+The build also pins `golang.org/x/net` v0.56.0 (and the compatible transitive
+versions selected by Go 1.26.6) instead of upstream's vulnerable v0.49.0.
+The resulting compatibility marker is `+multispeed.dns2.xnet056`.
 
 The upstream `--source` implementation sets `net.Dialer.LocalAddr` for HTTP
 connections but leaves hostname lookups on `net.DefaultResolver`. MultiSpeed
