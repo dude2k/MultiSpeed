@@ -25,7 +25,7 @@ mkdir -p "${data_dir}"
 cat >"${fake_cli}" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then
-  printf '%s\n' 'librespeed-cli v1.0.13+multispeed.dns2.xnet055 smoke fixture'
+  printf '%s\n' 'librespeed-cli v1.0.13+multispeed.dns2.xnet056 smoke fixture'
   exit 0
 fi
 printf '%s\n' '[{"timestamp":"2026-01-01T00:00:00Z","server":{"name":"Local smoke fixture","url":"http://127.0.0.1"},"client":{"ip":"203.0.113.10"},"bytes_sent":62500000,"bytes_received":125000000,"ping":8.25,"jitter":0.75,"upload":50,"download":100,"share":""}]'

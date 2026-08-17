@@ -4,6 +4,10 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+### Security
+
+- Upgrade the build toolchain to Go 1.26.6 and the patched LibreSpeed overlay to `golang.org/x/net` v0.56.0.
+
 ## [1.0.4] - 2026-08-11
 
 ### Fixed

@@ -51,7 +51,7 @@ test('complete operator workflow through the real backend and fake provider exec
   expect(providersResponse.ok()).toBe(true)
   const providers = await providersResponse.json() as Array<{ id: string; available: boolean; version: string }>
   expect(providers.find((provider) => provider.id === 'ookla')).toMatchObject({ available: false })
-  expect(providers.find((provider) => provider.id === 'librespeed')).toMatchObject({ available: true, version: 'librespeed-cli v1.0.13+multispeed.dns2.xnet055 deterministic-e2e' })
+  expect(providers.find((provider) => provider.id === 'librespeed')).toMatchObject({ available: true, version: 'librespeed-cli v1.0.13+multispeed.dns2.xnet056 deterministic-e2e' })
 
   await page.goto('/settings')
   await expect(page.getByText('Ookla provider terms & authorization')).toBeVisible()

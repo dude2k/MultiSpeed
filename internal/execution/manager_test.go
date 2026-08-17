@@ -42,7 +42,7 @@ type availabilityOnlyLibreSpeedRunner struct {
 func (r *availabilityOnlyLibreSpeedRunner) Run(_ context.Context, request providerprocess.Request) (providerprocess.Result, error) {
 	if len(request.Arguments) == 1 && request.Arguments[0] == "--version" {
 		r.versionCalls.Add(1)
-		return providerprocess.Result{Stdout: "librespeed-cli v1.0.13+multispeed.dns2.xnet055"}, nil
+		return providerprocess.Result{Stdout: "librespeed-cli v1.0.13+multispeed.dns2.xnet056"}, nil
 	}
 	r.executionCalls.Add(1)
 	return providerprocess.Result{}, errors.New("unexpected LibreSpeed test execution")
