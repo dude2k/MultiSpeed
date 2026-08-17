@@ -23,8 +23,8 @@ RUN npm run build && \
 
 FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS librespeed-build
 ARG LIBRESPEED_VERSION=v1.0.13
-ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet055
-ARG LIBRESPEED_X_NET_VERSION=v0.55.0
+ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet056
+ARG LIBRESPEED_X_NET_VERSION=v0.56.0
 ARG BUILD_DATE=unknown
 ENV CGO_ENABLED=0 \
     GOOS=linux \
@@ -113,8 +113,8 @@ ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown
 ARG LIBRESPEED_VERSION=v1.0.13
-ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet055
-ARG LIBRESPEED_X_NET_VERSION=v0.55.0
+ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet056
+ARG LIBRESPEED_X_NET_VERSION=v0.56.0
 
 LABEL org.opencontainers.image.title="MultiSpeed" \
       org.opencontainers.image.description="Production-ready multi-WAN speed-test monitor" \

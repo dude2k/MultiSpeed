@@ -8,7 +8,7 @@ export GOOS=linux
 export GOARCH=amd64
 
 version="${LIBRESPEED_VERSION:-v1.0.13}"
-patch_version="${LIBRESPEED_PATCH_VERSION:-multispeed.dns2.xnet055}"
+patch_version="${LIBRESPEED_PATCH_VERSION:-multispeed.dns2.xnet056}"
 build_date="${BUILD_DATE:-unknown}"
 output="${OUTPUT:-./librespeed-cli}"
 
