@@ -231,5 +231,5 @@ jobs:
             "${source_archive}.sha256#Corresponding-source SHA-256" \
             --verify-tag \
             --title "MultiSpeed ${{ steps.release.outputs.version }}" \
-            --draft \
+            --latest \
             --generate-notes
