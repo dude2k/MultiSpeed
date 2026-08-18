@@ -4,6 +4,12 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-18
+
+### Added
+
+- Add a persisted German/English UI switch, including translated application navigation, page framing, shared feedback states, dialogs, and notifications.
+
 ## [1.1.0] - 2026-08-17
 
 ### Added
@@ -100,7 +106,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/dude2k/MultiSpeed/compare/v1.0.2...v1.0.3

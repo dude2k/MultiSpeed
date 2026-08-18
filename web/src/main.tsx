@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router'
 import { App } from './App'
 import { queryClient } from './lib/query'
 import { ToastProvider } from './components/ui/toast'
+import { I18nProvider } from './i18n'
 import './index.css'
 
 const storedTheme = localStorage.getItem('multispeed-theme')
@@ -18,7 +19,7 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ToastProvider><App /></ToastProvider>
+        <I18nProvider><ToastProvider><App /></ToastProvider></I18nProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
