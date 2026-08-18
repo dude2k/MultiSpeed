@@ -21,6 +21,25 @@ The application is a single Go process with an embedded React interface and SQLi
 - CSV/JSON result exports, portable configuration import/export, online SQLite backup, retention, and maintenance controls
 - No external database, Redis, worker, cron container, frontend container, or Docker socket
 
+## Interface preview
+
+The screenshots use synthetic, anonymized demo data and documentation-only IP addresses. Select an image to view it at full resolution.
+
+[![MultiSpeed dashboard showing WAN health, throughput, schedules, and network readiness](docs/screenshots/dashboard.png)](docs/screenshots/dashboard.png)
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="docs/screenshots/tasks.png"><img src="docs/screenshots/tasks.png" alt="MultiSpeed task list with providers, network paths, schedules, and enabled states"></a>
+      <br><sub><strong>Tasks:</strong> independent schedules and network paths.</sub>
+    </td>
+    <td width="50%">
+      <a href="docs/screenshots/results.png"><img src="docs/screenshots/results.png" alt="MultiSpeed measurement history with provider, WAN path, throughput, and latency"></a>
+      <br><sub><strong>Results:</strong> filterable measurements and diagnostics.</sub>
+    </td>
+  </tr>
+</table>
+
 ## Provider support
 
 | Provider | Packaging | Target modes | Network binding | Important limitation |
