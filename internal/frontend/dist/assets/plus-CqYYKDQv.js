@@ -1,0 +1,1 @@
+import{L as e}from"./index-BFRz1A1B.js";var t=e(`plus`,[[`path`,{d:`M5 12h14`,key:`1ays0h`}],[`path`,{d:`M12 5v14`,key:`s699le`}]]);export{t};
