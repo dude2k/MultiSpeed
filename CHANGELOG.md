@@ -4,6 +4,10 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+### Security
+
+- Override the build-time `js-yaml` dependency to 4.3.1 and update `nanoid` to 3.3.18 to address CPU-exhaustion advisories in the frontend toolchain.
+
 ## [1.2.0] - 2026-08-18
 
 ### Added
