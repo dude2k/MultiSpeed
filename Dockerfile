@@ -130,7 +130,7 @@ LABEL org.opencontainers.image.title="MultiSpeed" \
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install --yes --no-install-recommends ca-certificates iproute2 tzdata; \
+    apt-get install --yes --no-install-recommends ca-certificates iproute2 libpcre2-8-0 tzdata; \
     rm -rf /var/lib/apt/lists/*; \
     groupadd --system --gid 10001 multispeed; \
     useradd --system --uid 10001 --gid multispeed --home-dir /nonexistent --shell /usr/sbin/nologin multispeed; \
