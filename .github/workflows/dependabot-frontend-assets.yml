@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Validate originating pull request
         id: pull-request
-        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const run = context.payload.workflow_run
@@ -73,7 +73,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download unprivileged frontend build
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dependabot-frontend-dist-${{ steps.pull-request.outputs.number }}
           path: .dependabot-frontend-dist
@@ -92,9 +92,15 @@ jobs:
           test -z "$(find .dependabot-frontend-dist -type l -print -quit)"
           rsync --archive --delete .dependabot-frontend-dist/ internal/frontend/dist/
           mapfile -t changed < <(
-            { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u
+            {
+              git diff --name-only -- internal/frontend/dist
+              git ls-files --others --exclude-standard -- internal/frontend/dist
+            } | sort -u
           )
-          test "${#changed[@]}" -gt 0
+          if (( ${#changed[@]} == 0 )); then
+            echo 'Embedded frontend assets are already current.'
+            exit 0
+          fi
           for path in "${changed[@]}"; do
             case "${path}" in
               internal/frontend/dist/*) ;;
