@@ -4,6 +4,22 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-18
+
+### Added
+
+- Add anonymized interface previews and reusable transparent wordmark and square logo assets to the project documentation.
+
+### Changed
+
+- Refresh Go, npm, and GitHub Actions dependencies, including `modernc.org/sqlite` 1.58.0 and Vitest 4.1.11.
+
+### Fixed
+
+- Publish a GitHub release only after the release image and its security and compliance artifacts have been published successfully.
+- Keep automated Dependabot frontend-asset refreshes scoped to embedded assets and handle builds that produce no asset changes.
+- Install the patched Debian PCRE2 runtime package required by the container vulnerability gate.
+
 ### Security
 
 - Override the build-time `js-yaml` dependency to 4.3.2 and update `nanoid` to 3.3.18 to address CPU-exhaustion advisories in the frontend toolchain.
@@ -110,7 +126,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/dude2k/MultiSpeed/compare/v1.0.3...v1.0.4
