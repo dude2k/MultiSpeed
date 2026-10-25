@@ -48,7 +48,7 @@ const pageMeta: Record<string, { title: string; eyebrow: string }> = {
 function Brand() {
   const { t } = useI18n()
   return (
-    <NavLink to="/" className="group flex items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring" aria-label={`MultiSpeed ${t('Path telemetry')} – ${t('Dashboard')}`}>
+    <NavLink to="/" className="group flex items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-ring" title={t('Dashboard')}>
       <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-cyan-400/20 bg-slate-950 shadow-lg shadow-cyan-950/30">
         <span className="flex h-5 items-end gap-[3px]" aria-hidden="true">
           <span className="h-2 w-1 rounded-full bg-cyan-300" />
