@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.26.6
+ARG GO_VERSION=1.26.10
 ARG DEBIAN_RELEASE=bookworm
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:632dff7351799a5a9954a48dc06670ade72ee44e8c351cdc0e5a57af2fea21af AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build -trimpath -buildvcs=false -o /out/multispeed-e2e ./web/e2e/backend
 
-FROM debian:${DEBIAN_RELEASE}-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
+FROM debian:${DEBIAN_RELEASE}-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8
 RUN groupadd --system --gid 10001 multispeed && \
     useradd --system --uid 10001 --gid multispeed --home-dir /nonexistent --shell /usr/sbin/nologin multispeed && \
     install -d -o multispeed -g multispeed -m 0750 /data && \
