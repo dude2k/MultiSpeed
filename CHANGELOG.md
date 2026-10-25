@@ -18,6 +18,10 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Consolidate the pending Go, npm, and GitHub Actions updates, including SQLite 1.60.1, Prometheus client 1.25.0, and Vitest 5.0.5.
 - Regenerate the embedded frontend and synchronize the development, test, and release build baselines.
 
+### Fixed
+
+- Include the visible logo text and EN/DE language codes in accessible names so speech control and screen readers can identify the controls consistently in both interface languages.
+
 ## [1.2.1] - 2026-09-18
 
 ### Added
