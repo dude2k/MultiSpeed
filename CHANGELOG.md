@@ -4,6 +4,12 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-10-25
+
+### Changed
+
+- Upgrade the SQLite driver (`modernc.org/sqlite`) to 1.61.0, its matching `modernc.org/libc` runtime to 1.79.0, and the associated Go dependencies.
+
 ## [1.2.2] - 2026-10-25
 
 ### Security
@@ -144,7 +150,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/dude2k/MultiSpeed/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/dude2k/MultiSpeed/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...v1.2.0
