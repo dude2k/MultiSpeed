@@ -29,7 +29,7 @@ type Adapter struct {
 }
 
 const (
-	requiredDNSPatchMarker            = "+multispeed.dns2.xnet056"
+	requiredDNSPatchMarker            = "+multispeed.dns2.xnet061"
 	allowedServerEndpointsEnvironment = "MULTISPEED_PROVIDER_ALLOWED_SERVER_ENDPOINTS"
 )
 

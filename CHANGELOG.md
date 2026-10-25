@@ -4,6 +4,20 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-25
+
+### Security
+
+- Upgrade the Go build and test toolchain to 1.26.10 to fix reachable standard-library vulnerabilities in HTTP, TLS, and certificate validation.
+- Upgrade the LibreSpeed overlay to `golang.org/x/net` 0.61.0 and require the `multispeed.dns2.xnet061` compatibility marker, rejecting older vulnerable replacement binaries.
+- Refresh pinned Node.js and Debian images, use Node.js 24.22.1, and install the patched Debian Perl runtime package.
+- Update vulnerable frontend and build-tool dependencies, including Vite, Vitest, Zod, Undici, source-map-js, and brace-expansion.
+
+### Changed
+
+- Consolidate the pending Go, npm, and GitHub Actions updates, including SQLite 1.60.1, Prometheus client 1.25.0, and Vitest 5.0.5.
+- Regenerate the embedded frontend and synchronize the development, test, and release build baselines.
+
 ## [1.2.1] - 2026-09-18
 
 ### Added
@@ -126,7 +140,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/dude2k/MultiSpeed/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/dude2k/MultiSpeed/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dude2k/MultiSpeed/compare/v1.0.4...v1.1.0

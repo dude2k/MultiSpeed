@@ -210,7 +210,7 @@ Boolean variables reject malformed values instead of silently falling back. No e
 
 ## Development
 
-Prerequisites are Go 1.26.6, Node.js 24, npm 11, and Linux for networking/integration behavior.
+Prerequisites are Go 1.26.10, Node.js 24, npm 11, and Linux for networking/integration behavior.
 
 ```bash
 go mod download
