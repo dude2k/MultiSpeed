@@ -20,7 +20,7 @@ func (r *recordingRunner) Run(_ context.Context, request providerprocess.Request
 	if len(request.Arguments) == 1 && request.Arguments[0] == "--version" {
 		version := r.version
 		if version == "" {
-			version = "librespeed-cli v1.0.13+multispeed.dns2.xnet061"
+			version = "librespeed-cli v1.0.13+multispeed.dns2.xnet062"
 		}
 		return providerprocess.Result{Stdout: version}, nil
 	}
@@ -36,6 +36,7 @@ func TestAvailabilityRejectsUnpatchedCLI(t *testing.T) {
 		"librespeed-cli v1.0.13",
 		"librespeed-cli v1.0.13+multispeed.dns2.xnet055",
 		"librespeed-cli v1.0.13+multispeed.dns2.xnet056",
+		"librespeed-cli v1.0.13+multispeed.dns2.xnet061",
 	} {
 		adapter := New(binary, &recordingRunner{version: version})
 		availability := adapter.Availability(context.Background())

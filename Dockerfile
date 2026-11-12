@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 ARG NODE_VERSION=24.22.1
-ARG GO_VERSION=1.26.10
+ARG GO_VERSION=1.26.11
 ARG DEBIAN_RELEASE=bookworm
 
 FROM node:${NODE_VERSION}-${DEBIAN_RELEASE}-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS frontend-build
@@ -21,10 +21,10 @@ RUN npm run build && \
       /out/dependency-licenses \
       /license-overrides/npm
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:632dff7351799a5a9954a48dc06670ade72ee44e8c351cdc0e5a57af2fea21af AS librespeed-build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS librespeed-build
 ARG LIBRESPEED_VERSION=v1.0.13
-ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet061
-ARG LIBRESPEED_X_NET_VERSION=v0.61.0
+ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet062
+ARG LIBRESPEED_X_NET_VERSION=v0.62.0
 ARG BUILD_DATE=unknown
 ENV CGO_ENABLED=0 \
     GOOS=linux \
@@ -78,7 +78,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     cd /out/source; \
     sha256sum "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz" > "librespeed-cli-${LIBRESPEED_VERSION}-multispeed-corresponding-source.tar.gz.sha256"
 
-FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:632dff7351799a5a9954a48dc06670ade72ee44e8c351cdc0e5a57af2fea21af AS backend-build
+FROM golang:${GO_VERSION}-${DEBIAN_RELEASE}@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS backend-build
 ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown
@@ -108,13 +108,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -o /out/multispeed \
       ./cmd/multispeed
 
-FROM debian:${DEBIAN_RELEASE}-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS runtime
+FROM debian:${DEBIAN_RELEASE}-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS runtime
 ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown
 ARG LIBRESPEED_VERSION=v1.0.13
-ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet061
-ARG LIBRESPEED_X_NET_VERSION=v0.61.0
+ARG LIBRESPEED_PATCH_VERSION=multispeed.dns2.xnet062
+ARG LIBRESPEED_X_NET_VERSION=v0.62.0
 
 LABEL org.opencontainers.image.title="MultiSpeed" \
       org.opencontainers.image.description="Production-ready multi-WAN speed-test monitor" \
@@ -130,7 +130,7 @@ LABEL org.opencontainers.image.title="MultiSpeed" \
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install --yes --no-install-recommends ca-certificates iproute2 libpcre2-8-0 perl-base tzdata; \
+    apt-get install --yes --no-install-recommends apt libapt-pkg6.0 ca-certificates iproute2 libpcre2-8-0 perl-base tzdata; \
     rm -rf /var/lib/apt/lists/*; \
     groupadd --system --gid 10001 multispeed; \
     useradd --system --uid 10001 --gid multispeed --home-dir /nonexistent --shell /usr/sbin/nologin multispeed; \
