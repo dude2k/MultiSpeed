@@ -4,6 +4,20 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-11-12
+
+### Changed
+
+- Consolidate the pending frontend, SQLite 1.61.1, and GitHub Actions updates, including `@hookform/resolvers` 6.0.0, React Router 8.5.1, Vite 8.3.6, and Vitest 5.1.0.
+- Regenerate the embedded frontend for the combined dependency updates and synchronize the application and OpenAPI version metadata.
+
+### Security
+
+- Upgrade the LibreSpeed overlay to `golang.org/x/net` 0.62.0 and require the `multispeed.dns2.xnet062` compatibility marker, rejecting older vulnerable replacement binaries.
+- Refresh the pinned Debian runtime image and explicitly upgrade APT and its runtime library to address the container scan findings.
+- Pin the build-time `minimatch` dependency to 11.0.7 to fix glob-pattern denial-of-service advisories in the lint dependency tree.
+- Upgrade the build and test toolchain to Go 1.26.11 to fix the reachable HTTP server vulnerability GO-2026-6859.
+
 ## [1.2.3] - 2026-10-25
 
 ### Changed
@@ -150,7 +164,8 @@ All notable changes to MultiSpeed are documented here. The project follows [Sema
 - Non-root read-only container with all capabilities dropped and `no-new-privileges`.
 - Ookla Speedtest CLI is never downloaded or redistributed by the project image; in-app acceptance remains separate from installation and licensing permission.
 
-[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/dude2k/MultiSpeed/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/dude2k/MultiSpeed/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/dude2k/MultiSpeed/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/dude2k/MultiSpeed/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/dude2k/MultiSpeed/compare/v1.2.0...v1.2.1
